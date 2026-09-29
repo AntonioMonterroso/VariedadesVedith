@@ -51,7 +51,7 @@
         ${vencidas ? `<a class="banner bad" href="#/cobrar" style="text-decoration:none;color:inherit">${icon('alert')}<span class="grow"><b>${vencidas} ${vencidas === 1 ? 'deuda vencida' : 'deudas vencidas'}.</b> <span class="small muted">Toca para ver quién debe.</span></span>${icon('chevron', 'sm')}</a>` : ''}
         <div class="kpis">
           <div class="kpi pink"><span class="k-l">Vendido hoy</span><span class="k-v num">${money(sum(deHoy))}</span><span class="small muted">${deHoy.length} ${deHoy.length === 1 ? 'venta' : 'ventas'}</span></div>
-          <div class="kpi green"><span class="k-l">Vendido este mes</span><span class="k-v num">${money(sum(delMes))}</span><span class="small muted">${delMes.length} ventas</span></div>
+          <div class="kpi green"><span class="k-l">Vendido este mes</span><span class="k-v num">${money(sum(delMes))}</span><span class="small muted">${delMes.length} ${delMes.length === 1 ? 'venta' : 'ventas'}</span></div>
           <a class="kpi orange" href="#/cobrar" style="text-decoration:none;color:inherit"><span class="k-l">Por cobrar</span><span class="k-v num">${money(porCobrar)}</span><span class="small muted">${deudas.length} ${deudas.length === 1 ? 'deuda' : 'deudas'}</span></a>
           <a class="kpi" href="#/productos?f=stock" style="text-decoration:none;color:inherit"><span class="k-l">Poco o sin stock</span><span class="k-v num">${bajos.length}</span><span class="small muted">de ${activos.length} productos</span></a>
         </div>

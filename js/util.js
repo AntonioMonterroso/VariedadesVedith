@@ -109,7 +109,8 @@
     t.innerHTML = `<span class="grow">${esc(msg)}</span>` + (opts.action ? `<button type="button">${esc(opts.action.label)}</button>` : '');
     if (opts.action) t.querySelector('button').addEventListener('click', () => { opts.action.fn(); t.remove(); });
     wrap.appendChild(t);
-    setTimeout(() => t.remove(), opts.ms || (opts.action ? 7000 : 3200));
+    const quitar = () => { t.classList.add('out'); setTimeout(() => t.remove(), 190); };
+    setTimeout(quitar, opts.ms || (opts.action ? 7000 : 3200));
   }
 
   /* ---------- ventanas (hoja inferior en móvil, centrada en pantallas grandes) ---------- */
@@ -131,8 +132,10 @@
     const api = {
       el: ov, body: bodyEl, foot: footEl,
       close() {
-        if (!ov.isConnected) return;
-        ov.remove();
+        if (!ov.isConnected || ov.classList.contains('closing')) return;
+        // salida más rápida que la entrada; con movimiento reducido se quita al instante
+        ov.classList.add('closing');
+        setTimeout(() => ov.remove(), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 230);
         const i = stack.indexOf(api); if (i >= 0) stack.splice(i, 1);
         if (!stack.length) document.body.style.overflow = '';
         document.removeEventListener('keydown', onKey);

@@ -201,7 +201,7 @@
     return { id, params: new URLSearchParams(qs || '') };
   };
   APP.go = (id) => { location.hash = '#/' + id; };
-  APP.render = async function () {
+  APP.render = async function (animar) {
     if (!APP.user) return;
     let { id, params } = APP.route();
     const adminOnly = ['inicio', 'ventas', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'notificaciones', 'ajustes'];
@@ -213,9 +213,11 @@
     const main = APP.$('#main');
     main.innerHTML = '<div class="empty muted">Cargando…</div>';
     try { await page(main, params); } catch (e) { APP.handleErr(e); main.innerHTML = `<div class="empty">${icon('alert', 'lg')}<p>No se pudo cargar esta pantalla.</p><button class="btn secondary" onclick="location.reload()">Reintentar</button></div>`; }
+    if (animar === true) { main.classList.remove('page-in'); void main.offsetWidth; main.classList.add('page-in'); }
     window.scrollTo({ top: 0 });
   };
-  window.addEventListener('hashchange', () => { if (APP.user) APP.render(); });
+  window.addEventListener('hashchange', () => { if (APP.user) APP.render(true); });
+  window.addEventListener('scroll', () => { const t = document.querySelector('.topbar'); if (t) t.classList.toggle('scrolled', window.scrollY > 4); }, { passive: true });
 
   /* ---------- fotos por link: vista + galería ---------- */
   APP.gallery = function (fotos, nombre) {

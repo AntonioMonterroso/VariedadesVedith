@@ -90,7 +90,7 @@
       if (accion === 'vender') location.hash = '#/vender';
       else if (accion === 'etiquetas' && APP.isAdmin()) location.hash = '#/etiquetas';
     }
-    await APP.render();
+    await APP.render(true);
     if (accion === 'buscar') APP.openSearch();
     if (accion === 'escanear') APP.openScanner();
     // Refresco cada 45 s: datos y globito de avisos. Nunca pisa lo que estás escribiendo.
