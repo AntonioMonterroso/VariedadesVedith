@@ -319,7 +319,7 @@
   P.notificaciones = async function (main) {
     await APP.refreshCore();
     const st = await APP.pushEstado();
-    const icono = { venta: 'bag', stock_bajo: 'alert', deuda_vencida: 'wallet' };
+    const icono = { venta: 'bag', stock_bajo: 'alert', deuda_vencida: 'wallet', prueba: 'bell' };
     const paint = () => {
       main.innerHTML = `
         <div class="page-head"><div><h1>Notificaciones</h1><p class="sub">Ventas de tu equipo, stock bajo y deudas vencidas.</p></div>
@@ -349,10 +349,14 @@
       if (!st.ok) { box.innerHTML = `<div class="row">${icon('bell')}<b>Avisos en el teléfono</b></div><p class="small muted">${msgs[st.motivo]}</p>`; return; }
       box.innerHTML = `<div class="row between wrap"><div><b>Avisos en el teléfono</b><p class="small muted">Te llegan aunque tengas la app cerrada.</p></div>
         ${st.activo ? `<span class="pill ok">Activados</span>` : ''}</div>
-        <div class="row wrap">${st.activo ? '<button type="button" class="btn secondary sm" id="pTest">Probar aviso</button><button type="button" class="btn ghost sm" id="pOff">Desactivar en este teléfono</button>' : '<button type="button" class="btn sm" id="pOn">Activar avisos</button>'}</div>`;
+        <div class="row wrap">${st.activo ? '<button type="button" class="btn secondary sm" id="pTest">Probar aviso en este teléfono</button><button type="button" class="btn sm" id="pReal">Probar aviso completo (como una venta)</button><button type="button" class="btn ghost sm" id="pOff">Desactivar en este teléfono</button>' : '<button type="button" class="btn sm" id="pOn">Activar avisos</button>'}</div>`;
       const on = box.querySelector('#pOn'), off = box.querySelector('#pOff'), test = box.querySelector('#pTest');
       if (on) on.addEventListener('click', async () => { try { await APP.pushActivar(); st.activo = true; toast('Avisos activados'); pintarPush(); } catch (e) { toast(e.message === 'PERMISO_DENEGADO' ? 'No diste permiso para los avisos.' : APP.errMsg(e), { error: true }); } });
       if (off) off.addEventListener('click', async () => { await APP.pushDesactivar(); st.activo = false; pintarPush(); toast('Avisos desactivados aquí'); });
+      const real = box.querySelector('#pReal');
+      if (real) real.addEventListener('click', async () => {
+        try { await API.probarNotificacion(); await APP.refreshCore(); toast('Enviado. En unos segundos debe llegar al teléfono; si no llega, falta configurar el servidor (SUPABASE_SETUP.md, paso 6).', { ms: 6000 }); paint(); } catch (e) { APP.handleErr(e); }
+      });
       if (test) test.addEventListener('click', async () => { const reg = await navigator.serviceWorker.ready; reg.showNotification('Vedith Variedades', { body: 'Así te llegarán los avisos.', icon: 'icon-192.png', badge: 'icon-192.png' }); });
     }
     paint();

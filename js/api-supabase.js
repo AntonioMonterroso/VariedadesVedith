@@ -173,6 +173,8 @@
       q = ids ? q.in('id', ids) : q.eq('leida', false);
       ok(await q);
     },
+    // Crea un aviso real: el servidor lo manda al teléfono igual que uno de venta
+    async probarNotificacion() { ok(await sb.from('notificaciones').insert({ tipo: 'prueba', titulo: 'Prueba de aviso', mensaje: 'Si lees esto en el teléfono, los avisos de ventas funcionan.' })); },
     async pushSubscribe(sub) {
       const j = sub.toJSON();
       ok(await sb.from('push_suscripciones').upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' }));

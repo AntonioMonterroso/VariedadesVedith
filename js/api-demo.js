@@ -204,6 +204,7 @@
 
     async notificaciones() { admin(); return delay(db.notificaciones.slice(0, 120)); },
     async marcarLeidas(ids) { admin(); db.notificaciones.forEach((n) => { if (!ids || ids.includes(n.id)) n.leida = true; }); save(); },
+    async probarNotificacion() { admin(); db.notificaciones.unshift({ id: uid(), tipo: 'prueba', titulo: 'Prueba de aviso', mensaje: 'Aviso de prueba (demo).', leida: false, created_at: now() }); save(); },
     async pushSubscribe() {}, async pushUnsubscribe() {},
 
     async config() { return delay(rolActual() === 'administrador' ? db.config : { nombre_negocio: db.config.nombre_negocio, whatsapp: db.config.whatsapp }); },

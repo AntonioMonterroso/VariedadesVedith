@@ -44,6 +44,7 @@ La llave pública ya está en `config.js`. Faltan las dos funciones y sus secret
    Los valores se generaron con `node generar-vapid.mjs`; la llave privada y el secreto **no** se guardan en GitHub.
 3. En el SQL Editor corre `push_setup.sql` cambiando `<TU_SECRETO>` por el mismo `PUSH_SECRET`.
 4. En el panel: **Notificaciones → Activar avisos** desde el teléfono de la administradora.
+5. Toca **Probar aviso completo (como una venta)**: crea un aviso real y el servidor lo manda al teléfono. Si llega, las ventas también avisarán. («Probar aviso en este teléfono» solo prueba el teléfono, no el servidor.)
 
 En iPhone hace falta iOS 16.4 o superior y abrir la app **instalada** (Compartir → Agregar a pantalla de inicio).
 
