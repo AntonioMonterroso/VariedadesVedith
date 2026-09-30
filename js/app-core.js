@@ -117,9 +117,12 @@
       { id: 'reportes', label: 'Reportes', icon: 'chart' },
       { id: 'gastos', label: 'Gastos', icon: 'wallet' },
       { id: 'etiquetas', label: 'Imprimir etiquetas QR', icon: 'printer' },
+      { id: 'estados', label: 'Imágenes para estados', icon: 'image' },
       { id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
       { id: 'ajustes', label: 'Ajustes', icon: 'sliders' }
-    ] : [];
+    ] : [
+      { id: 'estados', label: 'Imágenes para estados', icon: 'image' }
+    ];
   }
 
   APP.buildShell = function () {
@@ -277,10 +280,11 @@
           <dt>Mínimo antes de avisar</dt><dd>${p.stock_minimo}</dd>
           <dt>Etiqueta QR</dt><dd>${p.etiqueta_impresa_at ? `Impresa · ${U.fmtDate(p.etiqueta_impresa_at)}` : '<span class="pill warn">Sin imprimir</span>'}</dd>` : ''}
         </dl>
-        ${ad ? `<div class="row wrap">
-          <button type="button" class="btn secondary sm" data-a="ingreso">${icon('plus', 'sm')} Ingreso de mercadería</button>
-          <button type="button" class="btn secondary sm" data-a="qr">${icon('qr', 'sm')} Ver QR</button>
-        </div>` : ''}`,
+        <div class="row wrap">
+          ${ad ? `<button type="button" class="btn secondary sm" data-a="ingreso">${icon('plus', 'sm')} Ingreso de mercadería</button>
+          <button type="button" class="btn secondary sm" data-a="qr">${icon('qr', 'sm')} Ver QR</button>` : ''}
+          <button type="button" class="btn secondary sm" data-a="estado">${icon('image', 'sm')} Imagen para estado</button>
+        </div>`,
       footer: `${ad ? `<button type="button" class="btn secondary" data-a="editar">${icon('edit')} Editar</button>` : ''}
                <button type="button" class="btn" data-a="vender" ${p.cantidad <= 0 ? 'disabled' : ''}>${icon('bag')} Vender</button>`
     });
@@ -292,6 +296,7 @@
     if (rb) rb.addEventListener('click', () => { const box = m.body.querySelector('#regBox'); box.hidden = !box.hidden; rb.setAttribute('aria-expanded', String(!box.hidden)); });
     on('editar', () => { m.close(); APP.openProductoForm(p); });
     on('qr', () => APP.openQR(p));
+    on('estado', () => APP.openEstado(p));
     on('ingreso', () => ingresoMercaderia(p, m));
   };
 

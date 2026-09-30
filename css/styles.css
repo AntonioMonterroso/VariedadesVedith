@@ -719,3 +719,7 @@ a.banner:active { transform: scale(.985); }
 
 /* Buscador de la barra: una sola línea, con puntos suspensivos si no cabe */
 .top-search span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* Vista previa de la imagen para estados (proporción 9:16) */
+.estado-prev { display: grid; place-items: center; }
+.estado-prev canvas { height: min(58dvh, 560px); width: auto; aspect-ratio: 9 / 16; max-width: 100%; border-radius: 22px; box-shadow: var(--shadow-2); background: var(--surface-2); }

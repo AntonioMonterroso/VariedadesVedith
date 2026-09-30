@@ -3,14 +3,14 @@
    Sirve para enseñar el panel sin tocar la base real. */
 (function () {
   'use strict';
-  const KEY = 'vedith-demo-v3';
+  const KEY = 'vedith-demo-v4';
   const PIN = { administrador: '111111', visualizador: '222222' };
   const ymdHoy = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
   const now = () => new Date().toISOString();
 
   const svg = (bg, fg, shape) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="${bg}"/>${shape(fg)}</svg>`);
+    `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 200 200"><rect width="200" height="200" fill="${bg}"/>${shape(fg)}</svg>`);
   const bowl = (fg) => `<path d="M30 90h140c0 45-30 75-70 75s-70-30-70-75z" fill="${fg}"/><rect x="24" y="78" width="152" height="16" rx="8" fill="${fg}" opacity=".75"/>`;
   const bottle = (fg) => `<rect x="82" y="26" width="36" height="22" rx="6" fill="${fg}" opacity=".75"/><rect x="62" y="46" width="76" height="130" rx="22" fill="${fg}"/>`;
   const box = (fg) => `<rect x="36" y="70" width="128" height="86" rx="14" fill="${fg}"/><rect x="30" y="58" width="140" height="20" rx="8" fill="${fg}" opacity=".75"/>`;
