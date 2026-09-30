@@ -12,5 +12,8 @@ window.VEDITH_CONFIG = {
   // Se genera con: node generar-vapid.mjs
   VAPID_PUBLIC_KEY: 'BP9_fBM3fJOViZbH_ZHgr1lhiKsuwP6iFngqL8s026R_cdt0O4eh9tEONMtzPZ8IL1fq7sMakuy3w6VoQP-tvjo',
 
+  // Nombres con los que quedaron las funciones en Supabase (el panel les puso nombres automáticos)
+  FUNCION_CAMBIAR_PIN: 'hyper-api',
+
   NEGOCIO: 'Vedith Variedades'
 };

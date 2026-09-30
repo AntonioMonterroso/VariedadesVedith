@@ -204,7 +204,7 @@
     },
 
     async cambiarPin(rol, pin) {
-      const { data, error } = await sb.functions.invoke('cambiar-pin', { body: { rol, pin } });
+      const { data, error } = await sb.functions.invoke(C.FUNCION_CAMBIAR_PIN || 'cambiar-pin', { body: { rol, pin } });
       if (error) {
         let code = 'ERROR';
         try { code = (await error.context.json()).error || code; } catch (_) {}
