@@ -649,6 +649,13 @@ grant select, insert, update, delete on
   to authenticated;
 grant select on escaneos_qr to authenticated;
 grant usage, select on sequence productos_codigo_seq to authenticated;
+
+-- La función de avisos (enviar-push) entra con el rol service_role: necesita poder leer
+-- perfiles y push_suscripciones. En proyectos nuevos tampoco se le dan estos permisos solos.
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant execute on all functions in schema public to service_role;
 grant select on vista_producto_publico, vista_config_publica to anon, authenticated;
 grant select on vista_catalogo, vista_categorias, vista_cuentas to authenticated;
 grant insert on escaneos_qr to anon, authenticated;

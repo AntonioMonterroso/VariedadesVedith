@@ -29,11 +29,13 @@ Deno.serve(async (req) => {
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
   // Solo las suscripciones de usuarios con rol administrador
-  const { data: admins } = await sb.from('perfiles').select('id').eq('rol', 'administrador');
+  const { data: admins, error: errPerfiles } = await sb.from('perfiles').select('id').eq('rol', 'administrador');
+  if (errPerfiles) return new Response(JSON.stringify({ enviados: 0, error: 'no se pudo leer perfiles: ' + errPerfiles.message }), { status: 200 });
   const ids = (admins ?? []).map((a) => a.id);
   if (!ids.length) return new Response(JSON.stringify({ enviados: 0, suscripciones: 0, motivo: 'no hay usuarios administrador en perfiles' }), { status: 200 });
 
-  const { data: subs } = await sb.from('push_suscripciones').select('*').in('user_id', ids);
+  const { data: subs, error: errSubs } = await sb.from('push_suscripciones').select('*').in('user_id', ids);
+  if (errSubs) return new Response(JSON.stringify({ enviados: 0, error: 'no se pudo leer push_suscripciones: ' + errSubs.message }), { status: 200 });
   const payload = JSON.stringify({
     title: n.titulo,
     body: n.mensaje ?? '',
