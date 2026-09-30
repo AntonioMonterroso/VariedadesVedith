@@ -459,15 +459,13 @@ begin
           case when p_forma_pago = 'contado' then p_metodo else null end, v_cuenta)
   returning * into v_venta;
 
-  -- TODA venta de un visualizador se reporta al administrador
-  if v_rol = 'visualizador' then
-    insert into notificaciones (tipo, titulo, mensaje, producto_id, venta_id)
-    values ('venta', 'Venta de ' || v_quien,
-            p_cantidad || ' × ' || v_prod.nombre || ' · Q' || to_char(v_venta.total, 'FM999999990.00')
-              || case when p_forma_pago = 'fiado' then ' · FIADO a ' || v_nombre else ' · ' || p_metodo end
-              || case when v_precio < v_prod.precio then ' · con descuento' else '' end,
-            v_prod.id, v_venta.id);
-  end if;
+  -- TODA venta se reporta al administrador (la haga quien la haga): aviso en el panel y en el teléfono
+  insert into notificaciones (tipo, titulo, mensaje, producto_id, venta_id)
+  values ('venta', 'Venta de ' || v_quien,
+          p_cantidad || ' × ' || v_prod.nombre || ' · Q' || to_char(v_venta.total, 'FM999999990.00')
+            || case when p_forma_pago = 'fiado' then ' · FIADO a ' || v_nombre else ' · ' || p_metodo end
+            || case when v_precio < v_prod.precio then ' · con descuento' else '' end,
+          v_prod.id, v_venta.id);
 
   if v_resto <= v_prod.stock_minimo then
     insert into notificaciones (tipo, titulo, mensaje, producto_id)

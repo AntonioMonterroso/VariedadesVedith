@@ -137,7 +137,7 @@
         precio_lista: p.precio, metodo_cobro: l.forma_pago === 'contado' ? (l.metodo_cobro || 'efectivo') : null, cuenta_id: cuenta
       };
       db.ventas.unshift(v);
-      if (rolActual() === 'visualizador') db.notificaciones.unshift({ id: uid(), tipo: 'venta', titulo: 'Venta de ' + quien, mensaje: `${l.cantidad} × ${p.nombre} · ${U.money(v.total)}${v.forma_pago === 'fiado' ? ' · FIADO a ' + nombre : ' · ' + v.metodo_cobro}${precio < p.precio ? ' · con descuento' : ''}`, producto_id: p.id, venta_id: v.id, leida: false, created_at: now() });
+      db.notificaciones.unshift({ id: uid(), tipo: 'venta', titulo: 'Venta de ' + quien, mensaje: `${l.cantidad} × ${p.nombre} · ${U.money(v.total)}${v.forma_pago === 'fiado' ? ' · FIADO a ' + nombre : ' · ' + v.metodo_cobro}${precio < p.precio ? ' · con descuento' : ''}`, producto_id: p.id, venta_id: v.id, leida: false, created_at: now() });
       if (p.cantidad <= p.stock_minimo) db.notificaciones.unshift({ id: uid(), tipo: 'stock_bajo', titulo: (p.cantidad === 0 ? 'Se agotó: ' : 'Queda poco: ') + p.nombre, mensaje: `Quedan ${p.cantidad} (${p.codigo} · Tupperware ${p.codigo_tupperware || '—'}).`, producto_id: p.id, venta_id: null, leida: false, created_at: now() });
       save();
       const { costo_unitario, user_id, rol, cuenta_id, precio_lista, ...recibo } = v;
