@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
   // Solo las suscripciones de usuarios con rol administrador
   const { data: admins } = await sb.from('perfiles').select('id').eq('rol', 'administrador');
   const ids = (admins ?? []).map((a) => a.id);
-  if (!ids.length) return new Response(JSON.stringify({ enviados: 0 }), { status: 200 });
+  if (!ids.length) return new Response(JSON.stringify({ enviados: 0, suscripciones: 0, motivo: 'no hay usuarios administrador en perfiles' }), { status: 200 });
 
   const { data: subs } = await sb.from('push_suscripciones').select('*').in('user_id', ids);
   const payload = JSON.stringify({
@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
   });
 
   let enviados = 0;
+  const fallos: { codigo?: number; detalle?: string }[] = [];
   await Promise.all((subs ?? []).map(async (s) => {
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 24 });
@@ -49,9 +50,10 @@ Deno.serve(async (req) => {
     } catch (e) {
       // 404/410 = el teléfono ya no está suscrito: se limpia
       if (e?.statusCode === 404 || e?.statusCode === 410) await sb.from('push_suscripciones').delete().eq('id', s.id);
-      else console.error('push falló', e?.statusCode, e?.body);
+      else { console.error('push falló', e?.statusCode, e?.body); fallos.push({ codigo: e?.statusCode, detalle: String(e?.body ?? e?.message ?? '').slice(0, 120) }); }
     }
   }));
 
-  return new Response(JSON.stringify({ enviados }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  // El resultado explica por qué no llegó un aviso (útil para diagnosticar)
+  return new Response(JSON.stringify({ enviados, suscripciones: (subs ?? []).length, fallos }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 });
