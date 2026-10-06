@@ -18,7 +18,19 @@
      Pantalla: lista de catálogos
      ===================================================================== */
   P.catalogos = async function (main) {
-    const [lista, archivados] = await Promise.all([API.catalogos(), API.catalogosArchivados()]);
+    let lista, archivados;
+    try { [lista, archivados] = await Promise.all([API.catalogos(), API.catalogosArchivados()]); }
+    catch (e) {
+      // Las tablas de catálogos todavía no existen en Supabase: se explica qué falta en vez de un error genérico
+      if (/PGRST205|schema cache|does not exist|42P01/i.test((e.code || '') + ' ' + (e.message || ''))) {
+        main.innerHTML = `<div class="page-head"><div><h1>Catálogos</h1></div></div>
+          <div class="card stack center">${icon('alert', 'lg')}<h2>Falta un paso en Supabase</h2>
+          <p class="muted">Para usar los catálogos hay que crear sus tablas una sola vez. En Supabase abre <b>SQL Editor</b>, pega todo el archivo <b>migracion_catalogos.sql</b> (está en el repositorio) y toca <b>Run</b>. Luego vuelve aquí.</p>
+          <button type="button" class="btn" onclick="location.reload()">Ya lo hice, volver a cargar</button></div>`;
+        return;
+      }
+      throw e;
+    }
     main.innerHTML = `
       <div class="page-head"><div><h1>Catálogos</h1><p class="sub">Sube el PDF y compártelo como un librito.</p></div><button type="button" class="btn" id="cNuevo">${icon('plus')} Catálogo</button></div>
       ${lista.length ? `<div class="stack">${lista.map((c) => `
