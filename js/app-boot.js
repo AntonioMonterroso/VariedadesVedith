@@ -153,6 +153,8 @@
      ===================================================================== */
   async function boot() {
     registrarSW();
+    const catalogo = new URLSearchParams(location.search).get('c');
+    if (catalogo) return APP.renderCatalogoPublico(catalogo);
     const codigo = new URLSearchParams(location.search).get('p');
     if (codigo) return renderPublic(codigo);
     let s = null;

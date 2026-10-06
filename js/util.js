@@ -40,6 +40,9 @@
     camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
     refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
     box: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>',
+    book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+    share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>',
+    expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'
   };
 
@@ -185,5 +188,15 @@
   function lsGet(k, d = null) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
 
-  window.U = { icon, esc, money, moneyShort, ymd, today, fmtDate, fmtTime, fmtDateTime, ago, norm, imageUrl, validUrl, imgTag, placeholder, toast, openModal, closeAllModals, confirmDialog, debounce, download, lsGet, lsSet };
+  const cargados = {};
+  function loadScript(src) {
+    if (!cargados[src]) cargados[src] = new Promise((res, rej) => {
+      const s = document.createElement('script'); s.src = src;
+      s.onload = () => res(); s.onerror = () => { delete cargados[src]; rej(new Error('No se pudo cargar ' + src)); };
+      document.head.appendChild(s);
+    });
+    return cargados[src];
+  }
+
+  window.U = { loadScript, icon, esc, money, moneyShort, ymd, today, fmtDate, fmtTime, fmtDateTime, ago, norm, imageUrl, validUrl, imgTag, placeholder, toast, openModal, closeAllModals, confirmDialog, debounce, download, lsGet, lsSet };
 })();

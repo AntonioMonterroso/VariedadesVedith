@@ -48,6 +48,13 @@ La llave pública ya está en `config.js`. Faltan las dos funciones y sus secret
 
 En iPhone hace falta iOS 16.4 o superior y abrir la app **instalada** (Compartir → Agregar a pantalla de inicio).
 
+## 7. Catálogos (librito digital)
+Para subir un PDF y compartirlo como un librito:
+1. En el SQL Editor pega **todo** `migracion_catalogos.sql` y dale **Run**. Crea las tablas, la carpeta de imágenes (Storage, pública para leer) y los permisos: solo la administración puede subir y borrar.
+2. En el panel: **Más → Catálogos (librito) → + Catálogo**. Elige el PDF, revisa las hojas (dividir, una página o girar) y súbelo. Tarda un par de minutos.
+3. Toca **Publicar y compartir**: sale el enlace, un QR y el botón de WhatsApp.
+4. Cuando termine la campaña: **Archivar y borrar**. Se borran las imágenes y solo queda anotado el nombre y las hojas.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

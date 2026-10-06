@@ -723,3 +723,57 @@ a.banner:active { transform: scale(.985); }
 /* Vista previa de la imagen para estados (proporción 9:16) */
 .estado-prev { display: grid; place-items: center; }
 .estado-prev canvas { height: min(58dvh, 560px); width: auto; aspect-ratio: 9 / 16; max-width: 100%; border-radius: 22px; box-shadow: var(--shadow-2); background: var(--surface-2); }
+
+/* Sin zoom al tocar rápido (doble toque) ni al escribir el PIN en el teléfono.
+   El pellizco para hacer zoom a propósito sigue funcionando. */
+html, body, button, a, input, select, textarea, label, summary, [role="button"] { touch-action: manipulation; }
+.keypad button, .bottomnav a, .bottomnav button, .chip, .btn, .icon-btn { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, select, textarea { font-size: max(16px, 1rem); } /* iOS hace zoom automático en campos menores a 16px */
+
+/* =====================================================================
+   Librito (visor del catálogo) y pantalla de catálogos
+   ===================================================================== */
+.lb-overlay { position: fixed; inset: 0; z-index: 250; }
+.lb-pagina { min-height: 100dvh; height: 100dvh; }
+.lb { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); color: #EAF4F2;
+  background: radial-gradient(1000px 700px at 50% 0%, #1B3836 0%, #0C1A19 70%); overflow: hidden; }
+.lb-top { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; }
+.lb-logo { height: 38px; width: auto; background: #fff; border-radius: 10px; padding: 3px 6px; }
+.lb-title { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.005em; }
+.lb-btn { color: #EAF4F2; background: rgba(255, 255, 255, .08); }
+@media (hover: hover) and (pointer: fine) { .lb-btn:hover { background: rgba(255, 255, 255, .16); } }
+.lb-stage { position: relative; min-height: 0; min-width: 0; overflow: hidden; display: grid; place-items: center; padding: 4px 8px; }
+.lb-book { width: 100%; height: 100%; min-width: 0; max-width: 100%; display: block; position: relative; }
+.lb-cargando { position: absolute; inset: 0; display: grid; place-items: center; color: #BFD9D5; font-weight: 700; }
+.lb-page { background: #fff; overflow: hidden; }
+.lb-page img { width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; user-select: none; pointer-events: none; }
+.lb-bar { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.lb-nav { width: 48px; height: 48px; border-radius: 50%; border: 0; display: grid; place-items: center; color: #EAF4F2; background: rgba(255, 255, 255, .1);
+  transition: transform 120ms var(--ease-out), background-color 160ms var(--ease-out), opacity 160ms var(--ease-out); }
+.lb-nav:active:not(:disabled) { transform: scale(.92); background: rgba(255, 255, 255, .22); }
+.lb-nav:disabled { opacity: .3; cursor: default; }
+.lb-pos { min-width: 150px; text-align: center; font-weight: 700; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.lb-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0; text-decoration: none;
+  font-weight: 800; font-size: .95rem; color: #0C1A19; background: #EAF4F2; transition: transform 120ms var(--ease-out); }
+.lb-pill:active { transform: scale(.97); }
+.lb-pill.wa { background: #2FB36B; color: #04210f; }
+.lb-zoom { position: fixed; inset: 0; z-index: 300; display: grid; grid-template-rows: auto 1fr; background: #0C1A19; animation: fade 200ms var(--ease-out); }
+.lb-zoom-bar { display: flex; align-items: center; justify-content: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; color: #EAF4F2; }
+.lb-zoom-body { overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y pinch-zoom; padding: 0 0 24px; }
+.lb-zoom-body img { display: block; margin: 0 auto; width: min(1800px, 170vw); height: auto; background: #fff; }
+@media (min-width: 900px) { .lb-zoom-body img { width: min(900px, 100%); } }
+@media (max-width: 600px) { .lb-pos { min-width: 120px; font-size: .9rem; } .lb-title { font-size: .95rem; } }
+
+.cat-card { display: grid; grid-template-columns: 110px 1fr; gap: 16px; align-items: start; }
+.cat-portada { width: 110px; aspect-ratio: 433 / 609; border-radius: 14px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; box-shadow: var(--shadow-1); }
+.cat-portada img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 420px) { .cat-card { grid-template-columns: 84px 1fr; gap: 12px; } .cat-portada { width: 84px; } }
+
+.rev-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); max-height: 52dvh; overflow: auto; padding: 4px; }
+.rev-card { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.rev-card canvas { width: 100%; height: auto; border-radius: 10px; background: var(--surface-2); }
+.rev-card .rev-n { font-weight: 800; font-size: .85rem; }
+.rev-card select.input { min-height: 42px; padding: 6px 10px; font-size: .95rem; }
+.barra { height: 14px; border-radius: 7px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
+.barra-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--pink-600), var(--orange-500)); border-radius: 7px; transition: width 300ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .barra-fill { transition: none; } .lb-zoom { animation-name: fade; } }

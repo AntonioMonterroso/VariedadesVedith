@@ -53,6 +53,7 @@
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (_) {} };
   load();
 
+  const CAT = { lista: [], pags: {}, archivados: [] };
   let session = null;
   const rolActual = () => (session ? session.rol : null);
   const admin = () => { if (rolActual() !== 'administrador') throw new Error('NO_AUTORIZADO'); };
@@ -218,6 +219,30 @@
       });
     },
     async logScan() {},
+    /* Catálogos: en la demo viven solo en memoria (se pierden al recargar la página) */
+    async catalogos() { admin(); return delay(CAT.lista); },
+    async catalogosArchivados() { admin(); return delay(CAT.archivados); },
+    async crearCatalogo(titulo) { admin(); const c = { id: uid(), titulo: titulo.trim(), paginas: 0, publicado: false, vigente: false, portada_url: null, created_at: now() }; CAT.lista.unshift(c); CAT.pags[c.id] = []; return delay(c); },
+    async subirPaginaCatalogo(id, numero, blob) { admin(); return { ruta: `${id}/p${numero}.jpg`, url: URL.createObjectURL(blob) }; },
+    async guardarPaginasCatalogo(id, paginas) {
+      admin(); const c = CAT.lista.find((x) => x.id === id);
+      CAT.pags[id] = paginas.map((p) => ({ catalogo_id: id, numero: p.numero, url_imagen: p.url, ruta: p.ruta, ancho: p.ancho, alto: p.alto }));
+      c.paginas = paginas.length; c.portada_url = paginas[0] ? paginas[0].url : null;
+    },
+    async paginasCatalogo(id) { admin(); return CAT.pags[id] || []; },
+    async setCatalogoPublicado(id, v) { admin(); CAT.lista.find((x) => x.id === id).publicado = v; },
+    async marcarVigente(id) { admin(); CAT.lista.forEach((c) => { c.vigente = c.id === id; }); },
+    async archivarCatalogo(id) {
+      admin(); const c = CAT.lista.find((x) => x.id === id);
+      CAT.archivados.unshift({ id: uid(), titulo: c.titulo, paginas: c.paginas, creado_el: c.created_at, archivado_el: now() });
+      CAT.lista = CAT.lista.filter((x) => x.id !== id); delete CAT.pags[id];
+    },
+    async borrarCatalogoIncompleto(id) { CAT.lista = CAT.lista.filter((x) => x.id !== id); delete CAT.pags[id]; },
+    async eliminarRegistroArchivado(id) { admin(); CAT.archivados = CAT.archivados.filter((x) => x.id !== id); },
+    async catalogoPublico(clave) {
+      const c = CAT.lista.find((x) => x.publicado && (clave === 'vigente' ? x.vigente : x.id === clave));
+      return c ? { catalogo: c, paginas: CAT.pags[c.id] || [], config: db.config } : { catalogo: null, paginas: [], config: {} };
+    },
     async cambiarPin(rol, pin) {
       admin(); if (!/^\d{6}$/.test(pin)) throw new Error('PIN_INVALIDO');
       const otro = rol === 'administrador' ? 'visualizador' : 'administrador';

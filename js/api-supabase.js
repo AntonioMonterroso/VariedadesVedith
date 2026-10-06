@@ -203,6 +203,50 @@
       try { await sb.from('escaneos_qr').insert({ producto_codigo: codigo, dispositivo: /Mobi/i.test(navigator.userAgent) ? 'móvil' : 'computadora' }); } catch (_) {}
     },
 
+    /* ---- catálogos (librito) ---- */
+    async catalogos() { return ok(await sb.from('catalogos').select('*').order('created_at', { ascending: false })); },
+    async catalogosArchivados() { return ok(await sb.from('catalogos_archivados').select('*').order('archivado_el', { ascending: false })); },
+    async crearCatalogo(titulo) { return ok(await sb.from('catalogos').insert({ titulo: titulo.trim() }).select().single()); },
+    async subirPaginaCatalogo(catalogoId, numero, blob) {
+      const ruta = `${catalogoId}/p${String(numero).padStart(3, '0')}.jpg`;
+      const { error } = await sb.storage.from('catalogos').upload(ruta, blob, { contentType: 'image/jpeg', upsert: true, cacheControl: '31536000' });
+      if (error) fail(error);
+      return { ruta, url: sb.storage.from('catalogos').getPublicUrl(ruta).data.publicUrl };
+    },
+    async guardarPaginasCatalogo(catalogoId, paginas) {
+      const rows = paginas.map((p) => ({ catalogo_id: catalogoId, numero: p.numero, url_imagen: p.url, ruta: p.ruta, ancho: p.ancho, alto: p.alto }));
+      ok(await sb.from('catalogo_paginas').upsert(rows, { onConflict: 'catalogo_id,numero' }));
+      ok(await sb.from('catalogos').update({ paginas: paginas.length, portada_url: paginas[0] ? paginas[0].url : null }).eq('id', catalogoId));
+    },
+    async paginasCatalogo(id) { return ok(await sb.from('catalogo_paginas').select('*').eq('catalogo_id', id).order('numero')); },
+    async setCatalogoPublicado(id, v) { ok(await sb.from('catalogos').update({ publicado: v }).eq('id', id)); },
+    async marcarVigente(id) { ok(await sb.rpc('marcar_catalogo_vigente', { p_id: id })); },
+    async quitarArchivosCatalogo(rutas) {
+      for (let i = 0; i < rutas.length; i += 100) {
+        const { error } = await sb.storage.from('catalogos').remove(rutas.slice(i, i + 100));
+        if (error) fail(error);
+      }
+    },
+    async archivarCatalogo(id) {
+      const pags = await this.paginasCatalogo(id);
+      await this.quitarArchivosCatalogo(pags.map((p) => p.ruta));   // primero los archivos; si falla, no se archiva
+      ok(await sb.rpc('archivar_catalogo', { p_id: id }));
+    },
+    async borrarCatalogoIncompleto(id, rutas) {
+      try { await this.quitarArchivosCatalogo(rutas); } catch (_) {}
+      ok(await sb.from('catalogos').delete().eq('id', id));
+    },
+    async eliminarRegistroArchivado(id) { ok(await sb.from('catalogos_archivados').delete().eq('id', id)); },
+    async catalogoPublico(clave) {
+      let q = sb.from('vista_catalogo_publico').select('*');
+      q = clave === 'vigente' ? q.eq('vigente', true).limit(1) : q.eq('id', clave).limit(1);
+      const cat = ok(await q)[0];
+      if (!cat) return { catalogo: null, paginas: [], config: {} };
+      const paginas = ok(await sb.from('vista_catalogo_paginas_pub').select('*').eq('catalogo_id', cat.id).order('numero'));
+      const cfg = ok(await sb.from('vista_config_publica').select('*'));
+      return { catalogo: cat, paginas, config: Object.fromEntries(cfg.map((r) => [r.clave, r.valor || ''])) };
+    },
+
     async cambiarPin(rol, pin) {
       const { data, error } = await sb.functions.invoke(C.FUNCION_CAMBIAR_PIN || 'cambiar-pin', { body: { rol, pin } });
       if (error) {
