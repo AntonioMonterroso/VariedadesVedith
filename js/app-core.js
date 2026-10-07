@@ -118,6 +118,7 @@
       { id: 'gastos', label: 'Gastos', icon: 'wallet' },
       { id: 'etiquetas', label: 'Imprimir etiquetas QR', icon: 'printer' },
       { id: 'catalogos', label: 'Catálogos (librito)', icon: 'book' },
+      { id: 'pendientes', label: 'Pendientes de completar', icon: 'alert' },
       { id: 'estados', label: 'Imágenes para estados', icon: 'image' },
       { id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
       { id: 'ajustes', label: 'Ajustes', icon: 'sliders' }
@@ -208,7 +209,7 @@
   APP.render = async function (animar) {
     if (!APP.user) return;
     let { id, params } = APP.route();
-    const adminOnly = ['inicio', 'ventas', 'catalogos', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'notificaciones', 'ajustes'];
+    const adminOnly = ['inicio', 'ventas', 'catalogos', 'pendientes', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'notificaciones', 'ajustes'];
     if (!isAdmin() && adminOnly.includes(id)) id = 'productos';
     if (isAdmin() && id === 'mis-ventas') id = 'ventas';
     const page = APP.pages[id] || APP.pages[isAdmin() ? 'inicio' : 'productos'];

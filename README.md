@@ -11,6 +11,7 @@ Panel para vender, controlar el inventario y pedir cajas de Tupperware. Sitio es
 - **Ventas** con fiado y abonos. Las ventas del visualizador le llegan a la administración (aviso en el panel y en el teléfono).
 - **Etiquetas QR** (solo administración): hojas listas para imprimir, con seguimiento de cuáles ya se imprimieron. Nunca se bloquea reimprimir.
 - **Catálogos (librito)**: subes el PDF de la campaña y se convierte en un librito que se voltea página por página. Se comparte con un enlace o QR sin PIN; al terminar la campaña se archiva y se borran las imágenes (queda solo el nombre y las hojas).
+- **Importador de productos**: marcas con un recuadro cada producto en las páginas del catálogo y se lee su código, nombre y precio (OCR dentro del navegador, sin costo). Los productos entran como borradores y se completan en «Pendientes» con tu precio y el enlace de su foto.
 - **App instalable** con atajos (buscar, vender, escanear, etiquetas), escáner de QR con la cámara y respaldo en Excel.
 
 ## Archivos

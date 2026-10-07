@@ -28,7 +28,8 @@
   const normProd = (r) => ({
     id: r.id, codigo: r.codigo, codigo_tupperware: r.codigo_tupperware || '',
     nombre: r.nombre, categoria_id: r.categoria_id, categoria: r.categorias ? r.categorias.nombre : (r.categoria || ''),
-    descripcion: r.descripcion || '', precio: Number(r.precio), precio_regateo: r.precio_regateo == null ? null : Number(r.precio_regateo), costo: r.costo == null ? null : Number(r.costo),
+    descripcion: r.descripcion || '', precio: Number(r.precio), precio_regateo: r.precio_regateo == null ? null : Number(r.precio_regateo),
+    precio_catalogo: r.precio_catalogo == null ? null : Number(r.precio_catalogo), costo: r.costo == null ? null : Number(r.costo),
     cantidad: r.cantidad, stock_minimo: r.stock_minimo == null ? 2 : r.stock_minimo,
     activo: r.activo !== false, etiqueta_impresa_at: r.etiqueta_impresa_at || null,
     fotos: Array.isArray(r.fotos) ? r.fotos
@@ -89,6 +90,7 @@
         stock_minimo: parseInt(p.stock_minimo, 10) || 0, activo: p.activo !== false,
         codigo_tupperware: (p.codigo_tupperware || '').trim() || null
       };
+      if (p.precio_catalogo !== undefined) row.precio_catalogo = p.precio_catalogo === '' || p.precio_catalogo == null ? null : Number(p.precio_catalogo);
       let id = p.id;
       if (id) ok(await sb.from('productos').update(row).eq('id', id));
       else id = ok(await sb.from('productos').insert(row).select('id').single()).id;
@@ -245,6 +247,22 @@
       const paginas = ok(await sb.from('vista_catalogo_paginas_pub').select('*').eq('catalogo_id', cat.id).order('numero'));
       const cfg = ok(await sb.from('vista_config_publica').select('*'));
       return { catalogo: cat, paginas, config: Object.fromEntries(cfg.map((r) => [r.clave, r.valor || ''])) };
+    },
+
+    /* ---- importador de productos desde el catálogo ---- */
+    async zonasProductos() { return ok(await sb.from('catalogo_productos').select('*')); },
+    // Crea cada producto como BORRADOR (oculto, sin precio de venta ni foto) y anota dónde está en el catálogo
+    async importarProductos(catalogoId, items) {
+      const creados = [];
+      for (const it of items) {
+        const id = await this.saveProducto({
+          nombre: it.nombre, descripcion: it.descripcion || '', codigo_tupperware: it.codigo || '', precio: 0, costo: 0, cantidad: 0,
+          stock_minimo: 2, activo: false, fotos: [], precio_catalogo: it.precio_catalogo
+        });
+        ok(await sb.from('catalogo_productos').insert({ catalogo_id: catalogoId, producto_id: id, pagina: it.pagina, x: it.x, y: it.y, w: it.w, h: it.h }));
+        creados.push(id);
+      }
+      return creados;
     },
 
     async cambiarPin(rol, pin) {

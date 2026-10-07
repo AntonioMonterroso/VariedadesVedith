@@ -777,3 +777,42 @@ input, select, textarea { font-size: max(16px, 1rem); } /* iOS hace zoom automá
 .barra { height: 14px; border-radius: 7px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
 .barra-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--pink-600), var(--orange-500)); border-radius: 7px; transition: width 300ms var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { .barra-fill { transition: none; } .lb-zoom { animation-name: fade; } }
+
+/* =====================================================================
+   Importador de productos y pendientes
+   ===================================================================== */
+.imp-overlay { position: fixed; inset: 0; z-index: 250; background: var(--bg); }
+.imp { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.imp-top { display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px; border-bottom: 1px solid var(--line); }
+.imp-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
+.imp-visor { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; position: relative; background: var(--surface-2); }
+.imp-barra { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-wrap: wrap; background: var(--bg); border-bottom: 1px solid var(--line); }
+.imp-num { width: 76px; min-height: 42px; text-align: center; padding: 4px 8px; }
+.imp-scroll { overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px; min-height: 0; }
+.imp-lienzo { position: relative; margin: 0 auto; width: 100%; max-width: 900px; touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; box-shadow: var(--shadow-2); background: #fff; }
+.imp-lienzo.mover { touch-action: auto; cursor: grab; }
+.imp-lienzo img { display: block; width: 100%; height: auto; pointer-events: none; }
+.imp-goma { position: absolute; border: 2.5px solid var(--orange-500); background: color-mix(in srgb, var(--orange-500) 22%, transparent); border-radius: 6px; pointer-events: none; }
+.imp-caja { position: absolute; border: 2.5px solid var(--green-600); background: color-mix(in srgb, var(--green-600) 16%, transparent); border-radius: 6px; pointer-events: none; }
+.imp-caja span { position: absolute; top: -12px; left: -2px; min-width: 24px; height: 24px; padding: 0 6px; display: grid; place-items: center; border-radius: 12px; background: var(--green-600); color: #fff; font-weight: 800; font-size: .8rem; }
+.imp-ayuda { padding: 8px 14px; background: var(--bg); border-top: 1px solid var(--line); color: var(--ink-2); }
+.imp-leyendo { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 12px 18px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 800; box-shadow: var(--shadow-2); }
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--bg) 35%, transparent); border-top-color: var(--bg); animation: giro 700ms linear infinite; }
+@keyframes giro { to { transform: rotate(360deg); } }
+.imp-lista { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 10px; padding: 12px; border-left: 1px solid var(--line); min-height: 0; background: var(--bg); }
+.imp-items { overflow: auto; display: grid; gap: 8px; align-content: start; min-height: 0; }
+.imp-item { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.imp-item.ya { border-color: var(--orange-500); }
+.imp-item img { width: 56px; height: 44px; object-fit: cover; border-radius: 8px; background: var(--surface-2); flex: none; }
+.imp-edit { display: grid; gap: 2px; text-align: left; border: 0; background: transparent; min-width: 0; padding: 0; }
+.imp-edit b { font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-recorte { width: 100%; max-height: 180px; object-fit: contain; border-radius: 12px; background: var(--surface-2); }
+@media (max-width: 900px) {
+  .imp-main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr); }
+  .imp-lista { border-left: 0; border-top: 1px solid var(--line); }
+}
+.pend { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: start; }
+.pend-ref { width: 150px; border-radius: 12px; background-color: #fff; background-repeat: no-repeat; border: 1px solid var(--line); min-height: 60px; }
+.pend-ref.vacio { display: grid; place-items: center; align-content: center; gap: 4px; color: var(--ink-3); aspect-ratio: 1; background: var(--surface-2); }
+@media (max-width: 560px) { .pend { grid-template-columns: 1fr; } .pend-ref { width: 100%; max-width: 320px; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 1.6s; } }

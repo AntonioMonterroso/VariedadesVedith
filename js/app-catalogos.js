@@ -45,6 +45,7 @@
             <div class="row wrap">
               <button type="button" class="btn secondary sm" data-a="ver">${icon('book', 'sm')} Ver</button>
               <button type="button" class="btn sm" data-a="compartir">${icon('share', 'sm')} Compartir</button>
+              <button type="button" class="btn secondary sm" data-a="importar">${icon('package', 'sm')} Importar productos</button>
             </div>
             <div class="row wrap">
               <button type="button" class="btn ghost sm" data-a="publicar">${c.publicado ? 'Dejar de publicar' : 'Publicar'}</button>
@@ -66,6 +67,7 @@
       const on = (a, fn) => card.querySelector(`[data-a="${a}"]`) && card.querySelector(`[data-a="${a}"]`).addEventListener('click', fn);
       on('ver', async () => { try { const pags = await API.paginasCatalogo(c.id); APP.verLibrito(c, pags, enlace(c.id)); } catch (e) { APP.handleErr(e); } });
       on('compartir', () => compartir(c));
+      on('importar', () => APP.abrirImportador(c));
       on('publicar', async () => { try { await API.setCatalogoPublicado(c.id, !c.publicado); toast(c.publicado ? 'Ya no se puede ver con el enlace' : 'Publicado: ya se puede ver con el enlace'); APP.render(); } catch (e) { APP.handleErr(e); } });
       on('vigente', async () => { try { await API.marcarVigente(c.id); toast('Es el catálogo vigente'); APP.render(); } catch (e) { APP.handleErr(e); } });
       on('archivar', () => archivar(c));

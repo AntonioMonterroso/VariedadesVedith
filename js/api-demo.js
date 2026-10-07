@@ -53,7 +53,7 @@
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (_) {} };
   load();
 
-  const CAT = { lista: [], pags: {}, archivados: [] };
+  const CAT = { lista: [], pags: {}, archivados: [], zonas: [] };
   let session = null;
   const rolActual = () => (session ? session.rol : null);
   const admin = () => { if (rolActual() !== 'administrador') throw new Error('NO_AUTORIZADO'); };
@@ -82,7 +82,7 @@
       if (!session) throw new Error('NO_AUTORIZADO');
       const list = db.productos.filter((p) => rolActual() === 'administrador' || p.activo).map((p) => {
         const o = { ...p, categoria: catName(p.categoria_id) };
-        if (rolActual() !== 'administrador') { delete o.costo; delete o.codigo_tupperware; delete o.stock_minimo; delete o.etiqueta_impresa_at; }
+        if (rolActual() !== 'administrador') { delete o.costo; delete o.precio_catalogo; delete o.codigo_tupperware; delete o.stock_minimo; delete o.etiqueta_impresa_at; }
         return o;
       });
       return delay(list.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
@@ -94,6 +94,7 @@
         precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, cantidad: parseInt(p.cantidad, 10) || 0,
         stock_minimo: parseInt(p.stock_minimo, 10) || 0, activo: p.activo !== false,
         precio_regateo: p.precio_regateo === '' || p.precio_regateo == null ? null : Number(p.precio_regateo),
+        ...(p.precio_catalogo !== undefined ? { precio_catalogo: p.precio_catalogo === '' || p.precio_catalogo == null ? null : Number(p.precio_catalogo) } : {}),
         codigo_tupperware: (p.codigo_tupperware || '').trim(), fotos: (p.fotos || []).filter(Boolean).slice(0, 5)
       };
       if (p.id) Object.assign(db.productos.find((x) => x.id === p.id), row);
@@ -242,6 +243,16 @@
     async catalogoPublico(clave) {
       const c = CAT.lista.find((x) => x.publicado && (clave === 'vigente' ? x.vigente : x.id === clave));
       return c ? { catalogo: c, paginas: CAT.pags[c.id] || [], config: db.config } : { catalogo: null, paginas: [], config: {} };
+    },
+    async zonasProductos() { admin(); return CAT.zonas; },
+    async importarProductos(catalogoId, items) {
+      admin(); const creados = [];
+      for (const it of items) {
+        const id = await this.saveProducto({ nombre: it.nombre, descripcion: it.descripcion || '', codigo_tupperware: it.codigo || '', precio: 0, costo: 0, cantidad: 0, stock_minimo: 2, activo: false, fotos: [], precio_catalogo: it.precio_catalogo });
+        CAT.zonas.push({ id: uid(), catalogo_id: catalogoId, producto_id: id, pagina: it.pagina, x: it.x, y: it.y, w: it.w, h: it.h });
+        creados.push(id);
+      }
+      return creados;
     },
     async cambiarPin(rol, pin) {
       admin(); if (!/^\d{6}$/.test(pin)) throw new Error('PIN_INVALIDO');

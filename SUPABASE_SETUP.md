@@ -55,6 +55,15 @@ Para subir un PDF y compartirlo como un librito:
 3. Toca **Publicar y compartir**: sale el enlace, un QR y el botón de WhatsApp.
 4. Cuando termine la campaña: **Archivar y borrar**. Se borran las imágenes y solo queda anotado el nombre y las hojas.
 
+## 8. Importar productos desde el catálogo
+1. En el SQL Editor pega **todo** `migracion_importador.sql` y dale **Run** (agrega el precio de referencia del catálogo y la tabla que recuerda dónde está cada producto).
+2. En **Más → Catálogos (librito)**, en el catálogo que quieras, toca **Importar productos**.
+3. Abre una página y **arrastra un recuadro** sobre el texto de cada producto (código, nombre y precio). Se lee solo; revisa y toca **Agregar a la lista**.
+4. Cuando termines, **Importar**. Los productos quedan como **borradores ocultos**, sin precio de venta ni foto.
+5. En **Más → Pendientes de completar** les pones tu precio, la cantidad y el enlace de la foto. Al tener precio se activan.
+
+La lectura es automática pero no perfecta: a veces confunde un número o una letra. El precio del catálogo es solo de referencia (el del catálogo viene en otra moneda). Siempre revisa lo que se leyó.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 
