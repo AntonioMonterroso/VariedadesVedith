@@ -26,7 +26,8 @@
      INICIO (administrador)
      ===================================================================== */
   P.inicio = async function (main) {
-    const [ventas, abonos, cajas] = await Promise.all([API.ventas(), API.abonos(), API.cajas()]);
+    const [ventas, abonos, cajas, dulces] = await Promise.all([API.ventas(), API.abonos(), API.cajas(), API.dulcesEntregas().catch(() => [])]);
+    const dulcesDeben = APP.dulcesPorCobrar ? APP.dulcesPorCobrar(dulces) : 0;
     const cajasSinPagar = cajas.filter((c) => !c.pagada);
     const vivas = ventas.filter((v) => !v.anulada);
     const hoy = APP.hoyStr(), mesIni = hoy.slice(0, 8) + '01';
@@ -49,6 +50,7 @@
       <div class="stack">
         ${sinEtiq.length ? `<a class="banner" href="#/etiquetas" style="text-decoration:none;color:inherit">${icon('qr')}<span class="grow"><b>${sinEtiq.length} ${sinEtiq.length === 1 ? 'producto sin' : 'productos sin'} etiqueta QR impresa.</b> <span class="small muted">Toca para imprimirlas.</span></span>${icon('chevron', 'sm')}</a>` : ''}
         ${pend.length ? `<a class="banner" href="#/pendientes" style="text-decoration:none;color:inherit">${icon('alert')}<span class="grow"><b>${pend.length} ${pend.length === 1 ? 'producto pendiente' : 'productos pendientes'} de completar.</b> <span class="small muted">Les falta precio o foto.</span></span>${icon('chevron', 'sm')}</a>` : ''}
+        ${dulcesDeben > 0.004 ? `<a class="banner" href="#/dulces" style="text-decoration:none;color:inherit">${icon('lock')}<span class="grow"><b>Dulces: te deben ${money(dulcesDeben)}.</b> <span class="small muted">Gelatinas y gomitas por cobrar.</span></span>${icon('chevron', 'sm')}</a>` : ''}
         ${cajasSinPagar.length ? `<a class="banner" href="#/cajas" style="text-decoration:none;color:inherit">${icon('box')}<span class="grow"><b>${cajasSinPagar.length} ${cajasSinPagar.length === 1 ? 'caja sin pagar' : 'cajas sin pagar'}</b> <span class="small muted">· ${money(cajasSinPagar.reduce((s, c) => s + c.monto_total, 0))} por pagar a Tupperware.</span></span>${icon('chevron', 'sm')}</a>` : ''}
         ${vencidas ? `<a class="banner bad" href="#/cobrar" style="text-decoration:none;color:inherit">${icon('alert')}<span class="grow"><b>${vencidas} ${vencidas === 1 ? 'deuda vencida' : 'deudas vencidas'}.</b> <span class="small muted">Toca para ver quién debe.</span></span>${icon('chevron', 'sm')}</a>` : ''}
         <div class="kpis">

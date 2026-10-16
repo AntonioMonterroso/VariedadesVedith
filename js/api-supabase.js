@@ -265,6 +265,32 @@
       return creados;
     },
 
+    /* ---- dulces (gelatinas y gomitas) · PRIVADO: solo administración ---- */
+    async dulcesProductos() { return ok(await sb.from('dulces_productos').select('*').order('tipo').order('nombre')); },
+    async saveDulceProducto(p) {
+      const row = { nombre: p.nombre.trim(), tipo: p.tipo, precio_default: Number(p.precio_default) || 0, activo: p.activo !== false };
+      if (p.id) ok(await sb.from('dulces_productos').update(row).eq('id', p.id)); else ok(await sb.from('dulces_productos').insert(row));
+    },
+    async deleteDulceProducto(id) { ok(await sb.from('dulces_productos').delete().eq('id', id)); },
+    async dulcesEntregas() {
+      return ok(await sb.from('dulces_entregas').select('*, dulces_items(*), dulces_pagos(*), dulces_gastos(*)').order('fecha', { ascending: false }).order('created_at', { ascending: false }).limit(2000))
+        .map((e) => ({ ...e, items: e.dulces_items || [], pagos: e.dulces_pagos || [], gastos: e.dulces_gastos || [] }));
+    },
+    async saveDulceEntrega(e) {
+      const row = { fecha: e.fecha, cliente: e.cliente.trim(), nota: (e.nota || '').trim() || null };
+      let id = e.id;
+      if (id) ok(await sb.from('dulces_entregas').update(row).eq('id', id));
+      else id = ok(await sb.from('dulces_entregas').insert(row).select('id').single()).id;
+      ok(await sb.from('dulces_items').delete().eq('entrega_id', id));
+      ok(await sb.from('dulces_gastos').delete().eq('entrega_id', id));
+      if (e.items.length) ok(await sb.from('dulces_items').insert(e.items.map((i) => ({ entrega_id: id, producto_id: i.producto_id || null, nombre: i.nombre, tipo: i.tipo, cantidad: parseInt(i.cantidad, 10), precio_unitario: Number(i.precio_unitario) }))));
+      if (e.gastos.length) ok(await sb.from('dulces_gastos').insert(e.gastos.map((g) => ({ entrega_id: id, concepto: g.concepto.trim(), cantidad: Number(g.cantidad) || 1, costo_unitario: Number(g.costo_unitario) || 0 }))));
+      return id;
+    },
+    async deleteDulceEntrega(id) { ok(await sb.from('dulces_entregas').delete().eq('id', id)); },
+    async addDulcePago(entregaId, p) { ok(await sb.from('dulces_pagos').insert({ entrega_id: entregaId, fecha: p.fecha, monto: Number(p.monto), metodo: p.metodo || 'efectivo', nota: (p.nota || '').trim() || null })); },
+    async deleteDulcePago(id) { ok(await sb.from('dulces_pagos').delete().eq('id', id)); },
+
     async cambiarPin(rol, pin) {
       const { data, error } = await sb.functions.invoke(C.FUNCION_CAMBIAR_PIN || 'cambiar-pin', { body: { rol, pin } });
       if (error) {

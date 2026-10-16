@@ -53,6 +53,7 @@
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (_) {} };
   load();
 
+  const DUL = { productos: [{ id: 'dp1', nombre: 'Gelatina mosaico', tipo: 'gelatina', precio_default: 5, activo: true }, { id: 'dp2', nombre: 'Gelatina de fresa', tipo: 'gelatina', precio_default: 4, activo: true }, { id: 'dp3', nombre: 'Gelatina de uva', tipo: 'gelatina', precio_default: 4, activo: true }, { id: 'dp4', nombre: 'Gomitas en vasito', tipo: 'gomita', precio_default: 8, activo: true }], entregas: [] };
   const CAT = { lista: [], pags: {}, archivados: [], zonas: [] };
   let session = null;
   const rolActual = () => (session ? session.rol : null);
@@ -254,6 +255,22 @@
       }
       return creados;
     },
+    async dulcesProductos() { admin(); return delay(DUL.productos); },
+    async saveDulceProducto(p) { admin(); const row = { nombre: p.nombre.trim(), tipo: p.tipo, precio_default: Number(p.precio_default) || 0, activo: p.activo !== false }; if (p.id) Object.assign(DUL.productos.find((x) => x.id === p.id), row); else DUL.productos.push({ id: uid(), ...row }); },
+    async deleteDulceProducto(id) { admin(); DUL.productos = DUL.productos.filter((x) => x.id !== id); },
+    async dulcesEntregas() { admin(); return delay(DUL.entregas); },
+    async saveDulceEntrega(e) {
+      admin(); const row = { fecha: e.fecha, cliente: e.cliente.trim(), nota: (e.nota || '').trim() || null };
+      const items = e.items.map((i) => ({ id: uid(), producto_id: i.producto_id || null, nombre: i.nombre, tipo: i.tipo, cantidad: parseInt(i.cantidad, 10), precio_unitario: Number(i.precio_unitario) }));
+      const gastos = e.gastos.map((g) => ({ id: uid(), concepto: g.concepto.trim(), cantidad: Number(g.cantidad) || 1, costo_unitario: Number(g.costo_unitario) || 0 }));
+      if (e.id) Object.assign(DUL.entregas.find((x) => x.id === e.id), row, { items, gastos });
+      else { e.id = uid(); DUL.entregas.unshift({ id: e.id, created_at: now(), ...row, items, gastos, pagos: [] }); }
+      DUL.entregas.sort((a, b) => (b.fecha + b.created_at).localeCompare(a.fecha + a.created_at));
+      return e.id;
+    },
+    async deleteDulceEntrega(id) { admin(); DUL.entregas = DUL.entregas.filter((x) => x.id !== id); },
+    async addDulcePago(entregaId, p) { admin(); DUL.entregas.find((x) => x.id === entregaId).pagos.push({ id: uid(), fecha: p.fecha, monto: Number(p.monto), metodo: p.metodo || 'efectivo', nota: (p.nota || '').trim() || null }); },
+    async deleteDulcePago(id) { admin(); DUL.entregas.forEach((e) => { e.pagos = e.pagos.filter((p) => p.id !== id); }); },
     async cambiarPin(rol, pin) {
       admin(); if (!/^\d{6}$/.test(pin)) throw new Error('PIN_INVALIDO');
       const otro = rol === 'administrador' ? 'visualizador' : 'administrador';

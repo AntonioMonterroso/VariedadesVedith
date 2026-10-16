@@ -182,6 +182,12 @@
       add('Abonos', abonos.map((a) => ({ Fecha: new Date(a.created_at).toLocaleString('es-GT'), Monto: a.monto, Nota: a.nota, Venta: a.venta_id })));
       add('Cajas', cajas.flatMap((c) => (c.items.length ? c.items : [{}]).map((i) => ({ Caja: c.nombre, Pedido: c.numero_pedido, 'Fecha pedido': c.fecha_pedido, Estado: c.estado, Total: c.monto_total, Pagada: c.pagada ? 'Sí' : 'No', 'Pagada el': c.pagada_el, 'Cómo se pagó': APP.METODOS[c.metodo_pago] || '', Cuenta: APP.cuentaNombre(c.cuenta_id), Producto: i.producto_nombre, Cantidad: i.cantidad, 'Costo c/u': i.costo_unitario }))));
       add('Depósitos', movs.map((mv) => ({ Fecha: mv.fecha, De: APP.cuentaNombre(mv.origen_id), A: APP.cuentaNombre(mv.destino_id), Monto: mv.monto, Nota: mv.nota })));
+      try {
+        const dul = await API.dulcesEntregas();
+        add('Dulces entregas', dul.flatMap((d) => d.items.map((i) => ({ Fecha: d.fecha, Cliente: d.cliente, Tipo: i.tipo, Producto: i.nombre, Cantidad: i.cantidad, 'Precio c/u': i.precio_unitario, Subtotal: i.cantidad * i.precio_unitario, Nota: d.nota }))));
+        add('Dulces pagos', dul.flatMap((d) => d.pagos.map((p) => ({ Fecha: p.fecha, Cliente: d.cliente, Monto: p.monto, Forma: p.metodo, Nota: p.nota }))));
+        add('Dulces gastos', dul.flatMap((d) => d.gastos.map((x) => ({ Entrega: d.fecha, Cliente: d.cliente, Concepto: x.concepto, Cantidad: x.cantidad, 'Costo c/u': x.costo_unitario, Total: x.cantidad * x.costo_unitario }))));
+      } catch (_) { /* la sección de dulces aún no está activada: se omite */ }
       add('Gastos', gastos.map((g) => ({ Fecha: g.fecha, Concepto: g.concepto, Monto: g.monto, Nota: g.nota })));
       add('Clientes', clientes.map((c) => ({ Nombre: c.nombre, Teléfono: c.telefono })));
       XLSX.writeFile(wb, `respaldo_vedith_${ymd(new Date())}.xlsx`);
@@ -372,6 +378,7 @@
       <div class="stack">
         <section class="card stack"><h2>Negocio</h2>
           <label class="field">Nombre<input class="input" id="aNom" value="${esc(c.nombre_negocio || '')}" maxlength="60"></label>
+          <label class="field">Nombre en el comprobante de dulces <span class="hint">Sale arriba en la imagen que le mandas al cliente por las gelatinas y gomitas. Si lo dejas vacío usa el nombre del negocio.</span><input class="input" id="aDul" value="${esc(c.dulces_nombre || '')}" maxlength="60"></label>
           <label class="field">WhatsApp del negocio <span class="hint">Sale en la ficha pública para que el cliente te escriba. Ej.: 5555-1234</span><input class="input" id="aWa" type="tel" inputmode="tel" value="${esc(c.whatsapp || '')}"></label>
           <label class="field">Dirección de la app para los QR <span class="hint">Es la dirección web donde vive este panel (ej.: https://tuusuario.github.io/tupper-inventario/). Los QR impresos abren esta dirección: si la cambias después, hay que reimprimirlos.</span>
             <input class="input" id="aUrl" type="url" inputmode="url" value="${esc(c.url_base_qr || '')}" placeholder="${esc(new URL('./', location.href).href)}"></label>
@@ -403,7 +410,7 @@
     g('#aGuardar').addEventListener('click', async () => {
       let url = g('#aUrl').value.trim();
       if (url && !/^https?:\/\//i.test(url)) return toast('La dirección debe empezar con https://', { error: true });
-      try { await API.setConfig({ nombre_negocio: g('#aNom').value.trim(), whatsapp: g('#aWa').value.trim(), url_base_qr: url }); await APP.refreshCore(); toast('Ajustes guardados'); } catch (e) { APP.handleErr(e); }
+      try { await API.setConfig({ dulces_nombre: g('#aDul').value.trim(), nombre_negocio: g('#aNom').value.trim(), whatsapp: g('#aWa').value.trim(), url_base_qr: url }); await APP.refreshCore(); toast('Ajustes guardados'); } catch (e) { APP.handleErr(e); }
     });
     g('#pGuardar').addEventListener('click', async () => {
       const pin = g('#pNuevo').value.trim();

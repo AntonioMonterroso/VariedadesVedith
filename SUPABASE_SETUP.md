@@ -64,6 +64,18 @@ Para subir un PDF y compartirlo como un librito:
 
 La lectura es automática pero no perfecta: a veces confunde un número o una letra. El precio del catálogo es solo de referencia (el del catálogo viene en otra moneda). Siempre revisa lo que se leyó.
 
+## 9. Dulces (gelatinas y gomitas) · sección privada
+1. En el SQL Editor pega **todo** `migracion_dulces.sql` y dale **Run**. Crea sus tablas propias; solo la administración puede leerlas y no tienen ningún permiso público.
+2. En el panel: **Más → Dulces (privado)**. Ahí:
+   - **+ Entrega**: cliente, fecha, qué entregó (gelatinas o gomitas, cantidad y precio por pieza) y lo que gastó (ej. 6 bolsas de gelatina, 2 cajas de leche condensada). Calcula cuánto cobra, cuánto gastó y cuánto le sobra.
+   - **Registrar pago**: cada pago con fecha y forma de pago. Dice si cuadra, si falta o si pagaron de más.
+   - **Comprobante**: imagen para imprimir o mandar por WhatsApp. Lleva lo entregado, el total, los pagos y el saldo; **no** lleva gastos ni ganancias.
+   - **Por cliente**: lo entregado frente a lo pagado de cada cliente.
+   - **Mis productos**: la lista de gelatinas y gomitas con su precio por pieza.
+3. En **Ajustes** se puede poner el nombre que sale arriba del comprobante.
+
+Es solo para la administradora: no sale en el catálogo, en las fichas del QR, en las imágenes para estados ni para el visualizador.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

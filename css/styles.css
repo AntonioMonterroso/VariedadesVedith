@@ -816,3 +816,10 @@ input, select, textarea { font-size: max(16px, 1rem); } /* iOS hace zoom automá
 .pend-ref.vacio { display: grid; place-items: center; align-content: center; gap: 4px; color: var(--ink-3); aspect-ratio: 1; background: var(--surface-2); }
 @media (max-width: 560px) { .pend { grid-template-columns: 1fr; } .pend-ref { width: 100%; max-width: 320px; } }
 @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 1.6s; } }
+
+/* Dulces (privado) */
+.dul-linea { grid-template-columns: 1fr 1fr auto; }
+.dul-linea > :nth-child(1) { grid-column: 1 / 3; }
+.dul-linea .field { min-width: 0; }
+@media (max-width: 420px) { .dul-linea .seg button { padding: 0 10px; font-size: .9rem; } }
+@media print { .recibo-print { text-align: center; } .recibo-print img { width: 150mm; max-width: 100%; height: auto; } }
