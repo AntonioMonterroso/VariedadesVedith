@@ -94,9 +94,10 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 ## 12. Diseños y colores juntos, y archivado más seguro
 1. En el SQL Editor pega **todo** `migracion_disenos.sql` y dale **Run** (después de `migracion_colores.sql` y `migracion_campanas.sql`).
 2. **Variantes**: un producto puede venir por **color**, por **diseño** (capibara, princesas, carros…) o por **los dos** ("Capibara · Rosa"). En el formulario eliges los diseños y los colores que tiene y le pones las piezas de cada combinación. Al vender, pedir una caja o ingresar mercadería se elige la opción.
-3. **Dos o más colores en una misma opción**: en el editor, **Combinar dos o más colores** (por ejemplo Rosa + Azul). Queda como una sola opción con su propia existencia y se ve con el punto partido en sus colores.
-4. **Predeterminados propios**: en **Ajustes → Colores y diseños predeterminados** agregas los tuyos. También se pueden guardar al escribir uno nuevo dentro de un producto.
-5. **Archivar es más seguro**: al archivar una campaña eliges «solo los agotados» (lo recomendado) o «todo», y «todo» pide escribir ARCHIVAR. Después aparece **Deshacer** unos segundos. Borrar para siempre pide escribir BORRAR, y limpiar la base pide escribir LIMPIAR. Un producto archivado que aún tenía piezas espera el doble de tiempo antes de borrarse.
+3. **Colores sueltos junto a los diseños**: si un producto tiene diseños y también colores solos (sin diseño), deja encendido «Colores sueltos (sin diseño)». Cada color se combina con cada diseño y además se guarda solo.
+4. **Dos o más colores en una misma opción**: en el editor, **Combinar dos o más colores** (por ejemplo Rosa + Azul). Queda como una sola opción con su propia existencia y se ve con el punto partido en sus colores.
+5. **Predeterminados propios**: en **Ajustes → Colores y diseños predeterminados** agregas los tuyos. También se pueden guardar al escribir uno nuevo dentro de un producto.
+6. **Archivar es más seguro**: al archivar una campaña eliges «solo los agotados» (lo recomendado) o «todo», y «todo» pide escribir ARCHIVAR. Después aparece **Deshacer** unos segundos. Borrar para siempre pide escribir BORRAR, y limpiar la base pide escribir LIMPIAR. Un producto archivado que aún tenía piezas espera el doble de tiempo antes de borrarse.
 
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.

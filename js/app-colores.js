@@ -135,7 +135,7 @@
       const nomCol = [...APP.presetsColor().map(([n, h]) => [n, h, '']), ...tonos.filter((t) => !APP.presetsColor().some(([p]) => igual(p, t.n))).map((t) => [t.n, t.h, t.hs || ''])];
       const grupos = combos();
       const filas = !grupos.length ? '<p class="small muted">Elige al menos un diseño o un color para poner cuántas piezas hay.</p>'
-        : efectivos().map((d) => `<div class="ve-grupo">${d ? `<div class="ve-cab">${tagDis}<b>${esc(d)}</b></div>` : (dis.length ? '<div class="ve-cab"><b>Sin diseño</b></div>' : '')}
+        : efectivos().map((d) => `<div class="ve-grupo">${d ? `<div class="ve-cab">${tagDis}<b>${esc(d)}</b></div>` : (dis.length ? '<div class="ve-cab"><b>Colores sueltos (sin diseño)</b></div>' : '')}
             ${(tonos.length ? tonos : [{ n: '', h: '' }]).map((t) => {
               const k = llave(d, t.n);
               return `<div class="lote-fila" data-k="${esc(k)}">${t.n ? APP.dot(t.n, t.h, t.hs) : tagDis}<span class="grow t1">${esc(t.n || d)}</span>
@@ -145,7 +145,8 @@
       host.innerHTML = `<div class="stack">
         ${opts.piezasPrevias > 0 ? `<div class="banner">${icon('info')}<span class="small">Antes tenía ${opts.piezasPrevias} piezas sin repartir. Escríbelas en la opción que corresponda.</span></div>` : ''}
         ${opts.sinDisenos ? `<div class="banner">${icon('alert')}<span class="small">Para guardar <b>diseños</b> falta correr <b>migracion_disenos.sql</b> en Supabase. Mientras tanto solo se pueden guardar colores.</span></div>` : `<div class="stack-sm"><span class="small" style="font-weight:800">Diseños <span class="muted" style="font-weight:600">· si no tiene, déjalo vacío</span></span>
-          <div class="chips" style="flex-wrap:wrap;overflow:visible">${dis.length ? `<button type="button" class="chip" data-sd aria-pressed="${sinDis}">Sin diseño</button>` : ''}${nomDis.map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="${dis.some((x) => igual(x, n))}"><span class="dis-tag">${icon('tag', 'sm')}</span>${esc(n)}</button>`).join('')}</div>
+          <div class="chips" style="flex-wrap:wrap;overflow:visible">${dis.length ? `<button type="button" class="chip" data-sd aria-pressed="${sinDis}">Colores sueltos (sin diseño)</button>` : ''}${nomDis.map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="${dis.some((x) => igual(x, n))}"><span class="dis-tag">${icon('tag', 'sm')}</span>${esc(n)}</button>`).join('')}</div>
+ ${dis.length && tonos.length ? `<p class="small muted">Cada color se combina con cada diseño. Con <b>Colores sueltos</b> encendido, además se guardan los colores solos, sin diseño.</p>` : ''}
           <div class="row"><input class="input grow" data-nd maxlength="30" placeholder="Otro diseño" aria-label="Otro diseño"><button type="button" class="btn secondary sm" data-addd>Agregar</button></div></div>`}
         <div class="stack-sm"><span class="small" style="font-weight:800">Colores <span class="muted" style="font-weight:600">· si no tiene, déjalo vacío</span></span>
           <div class="chips" style="flex-wrap:wrap;overflow:visible">${nomCol.map(([n, h, hs]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" data-hs="${esc(hs)}" aria-pressed="${tonos.some((x) => igual(x.n, n))}">${APP.dot(n, h, hs)}${esc(n)}</button>`).join('')}</div>
@@ -161,7 +162,7 @@
         const i = lista.findIndex((x) => igual(x.n || x, nombre));
         if (i >= 0) lista.splice(i, 1); else lista.push(extra || nombre);
       };
-      host.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { alternar(dis, b.dataset.d); pintar(); aviso(); }));
+      host.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { const antes = dis.length; alternar(dis, b.dataset.d); if (!antes && dis.length && Object.values(qty).some((n) => n > 0)) sinDis = true; pintar(); aviso(); }));
       const sd = host.querySelector('[data-sd]'); if (sd) sd.addEventListener('click', () => { sinDis = !sinDis; pintar(); aviso(); });
       host.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { alternar(tonos, b.dataset.t, { n: b.dataset.t, h: b.dataset.h, hs: b.dataset.hs || '' }); pintar(); aviso(); }));
       host.querySelector('[data-combinar]').addEventListener('click', () => combinar((n, h, hs) => { if (!tonos.some((x) => igual(x.n, n))) tonos.push({ n, h, hs }); pintar(); aviso(); }));
@@ -169,7 +170,7 @@
       const nuevo = async (tipo, inputSel) => {
         const inp = host.querySelector(inputSel), nombre = inp.value.trim(); if (!nombre) return inp.focus();
         const hc = host.querySelector('[data-hc]'), hex = tipo === 'color' && hc.dataset.tocado ? hc.value : '';
-        if (tipo === 'diseno') { if (!dis.some((x) => igual(x, nombre))) dis.push(nombre); } else if (!tonos.some((x) => igual(x.n, nombre))) tonos.push({ n: nombre, h: hexPorNombre(nombre) || hex });
+        if (tipo === 'diseno') { if (!dis.some((x) => igual(x, nombre))) { const antes = dis.length; dis.push(nombre); if (!antes && Object.values(qty).some((n) => n > 0)) sinDis = true; } } else if (!tonos.some((x) => igual(x.n, nombre))) tonos.push({ n: nombre, h: hexPorNombre(nombre) || hex });
         if (guardar()) { try { if (await APP.guardarPreset(tipo, nombre, hex)) toast(`«${nombre}» guardado en tus predeterminados`); } catch (e) { console.error(e); } }
         pintar(); aviso();
       };
