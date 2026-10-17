@@ -48,8 +48,11 @@
   // Marca visual de una variante: etiqueta si tiene diseño, punto si tiene color
   APP.vdot = (c) => {
     const t = c.tono || (!c.diseno ? c.color : '');
-    return `${c.diseno ? tagDis : ''}${t ? APP.dot(t, c.hex, c.hexes) : ''}`;
+    const th = c.foto ? `<span class="var-th" data-foto="${esc(c.foto)}">${U.imgTag(c.foto, '')}</span>` : '';   // foto del diseño
+    return `${th}${c.diseno ? tagDis : ''}${t ? APP.dot(t, c.hex, c.hexes) : ''}`;
   };
+  // Al tocar la foto de un diseño se ve en grande
+  APP.bindVarFotos = (root) => root.querySelectorAll('.var-th[data-foto]').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); APP.lightbox([el.dataset.foto], 0); }));
   APP.etiquetaVar = (p) => {
     const cs = p.colores || [], d = cs.some((c) => c.diseno), t = cs.some((c) => c.tono || !c.diseno);
     return d && t ? 'opcion' : d ? 'diseno' : 'color';
@@ -150,12 +153,13 @@
      ===================================================================== */
   APP.editorColores = function (host, rows, opts = {}) {
     const llave = (d, t) => `${d || ''}|${t || ''}`;
-    const dis = [], grupos = {}, qty = {};
+    const dis = [], grupos = {}, qty = {}, fotos = {};     // fotos: diseño → link de su foto
     let sinDis = false;
     const grupo = (d) => (grupos[d] = grupos[d] || { tonos: [] });
     (rows || []).forEach((r) => {
       const d = r.diseno || '', t = r.tono || (!r.diseno ? r.color : '');
       if (d && !dis.some((x) => igual(x, d))) dis.push(d);
+      if (d && r.foto) fotos[d] = r.foto;
       if (!d) sinDis = true;
       const g = grupo(d);
       if (t && !g.tonos.some((x) => igual(x.n, t))) g.tonos.push({ n: t, h: validHex(r.hex) ? r.hex : hexPorNombre(t), hs: r.hexes || '' });
@@ -178,6 +182,8 @@
           <div class="ve-cab">${titulo}<span class="grow"></span>
             ${dis.length > 1 && g.tonos.length ? '<button type="button" class="btn ghost sm" data-copiar>Copiar colores a los demás</button>' : ''}
             <button type="button" class="btn secondary sm" data-addcol>${icon('plus', 'sm')} Colores</button></div>
+          ${d ? (opts.sinFotos ? '<p class="xs muted">Para poner foto a los diseños falta correr <b>migracion_fotos_disenos.sql</b> en Supabase.</p>'
+            : `<div class="foto-link" style="grid-template-columns:48px 1fr"><div class="prev" data-prev style="width:48px;height:48px">${fotos[d] ? U.imgTag(fotos[d], '') : icon('image')}</div><div><input class="input" data-furl type="url" inputmode="url" placeholder="Foto de este diseño: pega el link (opcional)" aria-label="Foto del diseño ${esc(d)}" value="${esc(fotos[d] || '')}"><div class="msg" data-fmsg hidden></div></div></div>`) : ''}
           ${filas.length ? filas.map((f) => {
             const k = llave(f.d, f.t);
             return `<div class="lote-fila" data-k="${esc(k)}">${f.t ? APP.dot(f.t, f.h, f.hs) : tagDis}<span class="grow t1">${esc(f.t || f.d)}${!f.t && f.d ? ' <span class="xs muted">(solo el diseño)</span>' : ''}</span>
@@ -197,7 +203,7 @@
       const alAgregarDiseno = (antes) => { if (!antes && dis.length) sinDis = grupo('').tonos.length > 0; };   // los colores que ya había quedan como sueltos
       host.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => {
         const antes = dis.length, i = dis.findIndex((x) => igual(x, b.dataset.d));
-        if (i >= 0) { const hay = filasDe(dis[i]).some((f) => (qty[llave(f.d, f.t)] || 0) > 0); if (hay) return toast('Ese diseño tiene piezas. Ponle 0 antes de quitarlo.', { error: true }); delete grupos[dis[i]]; dis.splice(i, 1); if (!dis.length) sinDis = true; }
+        if (i >= 0) { const hay = filasDe(dis[i]).some((f) => (qty[llave(f.d, f.t)] || 0) > 0); if (hay) return toast('Ese diseño tiene piezas. Ponle 0 antes de quitarlo.', { error: true }); delete grupos[dis[i]]; delete fotos[dis[i]]; dis.splice(i, 1); if (!dis.length) sinDis = true; }
         else { dis.push(b.dataset.d); alAgregarDiseno(antes); }
         pintar(); aviso();
       }));
@@ -215,6 +221,21 @@
       host.querySelectorAll('.ve-grupo').forEach((bl) => {
         const d = bl.dataset.g, g = grupo(d);
         bl.querySelector('[data-addcol]').addEventListener('click', () => selectorColores(d ? `Colores de «${d}»` : 'Colores sueltos', d, g, qty, () => { pintar(); aviso(); }));
+        const fu = bl.querySelector('[data-furl]');
+        if (fu) {
+          const prev = bl.querySelector('[data-prev]'), msg = bl.querySelector('[data-fmsg]');
+          fu.addEventListener('input', U.debounce(() => {
+            const raw = fu.value.trim(); msg.hidden = true; fu.classList.remove('bad');
+            if (!raw) { fotos[d] = ''; prev.innerHTML = icon('image'); return; }
+            const url = U.imageUrl(raw);
+            if (!U.validUrl(url)) { fotos[d] = ''; msg.textContent = 'Debe empezar con https://'; msg.hidden = false; fu.classList.add('bad'); return; }
+            fotos[d] = url;
+            const im = new Image(); im.referrerPolicy = 'no-referrer';
+            im.onload = () => { prev.innerHTML = ''; prev.appendChild(im); im.style.cssText = 'width:100%;height:100%;object-fit:cover'; };
+            im.onerror = () => { msg.textContent = 'No se pudo cargar esa foto. Usa el link directo de la imagen.'; msg.hidden = false; prev.innerHTML = icon('alert'); };
+            im.src = url;
+          }, 350));
+        }
         const cp = bl.querySelector('[data-copiar]');
         if (cp) cp.addEventListener('click', () => {
           dis.filter((x) => x !== d).forEach((o) => { const og = grupo(o); g.tonos.forEach((t) => { if (!og.tonos.some((x) => igual(x.n, t.n))) og.tonos.push({ ...t }); }); });
@@ -235,7 +256,7 @@
     return {
       total,
       get() {
-        return { colores: combos().map((c) => ({ color: [c.d, c.t].filter(Boolean).join(' · '), diseno: c.d || null, tono: c.t || null, hex: c.t && validHex(c.h) ? c.h : '', hexes: c.t && String(c.hs || '').split(',').filter(validHex).length > 1 ? c.hs : '', cantidad: qty[llave(c.d, c.t)] || 0 })) };
+        return { colores: combos().map((c) => ({ color: [c.d, c.t].filter(Boolean).join(' · '), diseno: c.d || null, tono: c.t || null, hex: c.t && validHex(c.h) ? c.h : '', hexes: c.t && String(c.hs || '').split(',').filter(validHex).length > 1 ? c.hs : '', foto: c.d ? (fotos[c.d] || '') : '', cantidad: qty[llave(c.d, c.t)] || 0 })) };
       }
     };
   };

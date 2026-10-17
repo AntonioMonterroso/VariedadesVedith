@@ -139,6 +139,7 @@
       <p class="xs faint center">${esc(cfg.nombre_negocio || 'Vedith Variedades')} · Distribuidor independiente de Tupperware</p>
     </div></div>`;
     APP.bindGallery(root(), fotos, p.nombre);
+    APP.bindVarFotos(root());
   }
 
   /* =====================================================================

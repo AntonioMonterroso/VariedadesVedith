@@ -311,6 +311,7 @@
                <button type="button" class="btn" data-a="vender" ${APP.sinStock(p) ? 'disabled' : ''}>${icon('bag')} Vender</button>`
     });
     APP.bindGallery(m.body, p.fotos, p.nombre);
+    APP.bindVarFotos(m.body);
     const on = (a, fn) => { m.el.querySelectorAll(`[data-a="${a}"]`).forEach((b) => b.addEventListener('click', fn)); };
     const irVender = () => { if (APP.current === 'vender') APP.render(); else APP.go('vender'); };
     on('vender', () => { m.close(); APP.addToCart(p.id, { despues: irVender }); });
@@ -422,7 +423,7 @@
     const colBox = m.body.querySelector('#pfColBox'), chkCol = m.body.querySelector('#pfUsaCol'), chkAv = m.body.querySelector('#pfAvisar');
     let ed = null;
     const montarEd = () => {
-      ed = APP.editorColores(colBox, p.colores || [], { sinDisenos: API._variantes === false, piezasPrevias: (p.colores && p.colores.length) || nuevo ? 0 : Number(p.cantidad) || 0, onChange: (t) => { m.body.querySelector('#pfCant').value = t; } });
+      ed = APP.editorColores(colBox, p.colores || [], { sinDisenos: API._variantes === false, sinFotos: API._fotosDis === false, piezasPrevias: (p.colores && p.colores.length) || nuevo ? 0 : Number(p.cantidad) || 0, onChange: (t) => { m.body.querySelector('#pfCant').value = t; } });
       m.body.querySelector('#pfCant').value = ed.total();
     };
     const alternarCol = () => { const on = chkCol.checked; colBox.hidden = !on; m.body.querySelector('#pfCant').disabled = on; if (on && !ed) montarEd(); };

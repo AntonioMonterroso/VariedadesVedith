@@ -99,6 +99,11 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 5. **Predeterminados propios**: en **Ajustes → Colores y diseños predeterminados** agregas los tuyos. También se pueden guardar al escribir uno nuevo dentro de un producto.
 6. **Archivar es más seguro**: al archivar una campaña eliges «solo los agotados» (lo recomendado) o «todo», y «todo» pide escribir ARCHIVAR. Después aparece **Deshacer** unos segundos. Borrar para siempre pide escribir BORRAR, y limpiar la base pide escribir LIMPIAR. Un producto archivado que aún tenía piezas espera el doble de tiempo antes de borrarse.
 
+## 13. Foto de cada diseño
+1. En el SQL Editor pega **todo** `migracion_fotos_disenos.sql` y dale **Run** (después de `migracion_disenos.sql`).
+2. En el editor del producto, cada diseño tiene su campo **Foto de este diseño**: pegas el link de la imagen (igual que las fotos del producto). La foto vale para todas las opciones de ese diseño.
+3. Se ve como miniatura al elegir la opción al vender, en la ficha del producto y en el QR público; al tocarla se amplía. También sale entre las fotos disponibles al crear una imagen para estados.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

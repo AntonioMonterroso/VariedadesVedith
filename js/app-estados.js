@@ -174,7 +174,7 @@
       listaFotos(); pintar();
     }
     function listaFotos() {
-      const fotos = p.fotos || [];
+      const fotos = [...new Set([...(p.fotos || []), ...(p.colores || []).map((c) => c.foto).filter(Boolean)])];
       g('#esFotos').innerHTML = `<div class="chips" style="flex-wrap:wrap;overflow:visible">
         ${fotos.length > 1 ? fotos.map((f, i) => `<button type="button" class="chip" data-f="${i}" aria-pressed="${foto === f}" style="padding:4px 6px" aria-label="Usar la foto ${i + 1}"><span style="width:44px;height:44px;border-radius:10px;overflow:hidden;display:block">${U.imgTag(f, '')}</span></button>`).join('') : ''}
         <label class="chip">${icon('camera', 'sm')} Subir foto<input type="file" accept="image/*" id="esArchivo" hidden></label></div>`;

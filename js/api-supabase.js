@@ -39,7 +39,7 @@
     campana: r.campana || '', archivado: !!r.archivado, archivado_at: r.archivado_at || null, conservar: !!r.conservar, agotado_desde: r.agotado_desde || null,
     colores: (r.producto_colores || r.colores || []).slice()
       .sort((a, b) => (a.orden || 0) - (b.orden || 0) || String(a.color).localeCompare(String(b.color), 'es'))
-      .map((c) => ({ id: c.id, color: c.color, diseno: c.diseno || '', tono: c.tono || '', hexes: c.hexes || '', hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
+      .map((c) => ({ id: c.id, color: c.color, diseno: c.diseno || '', tono: c.tono || '', hexes: c.hexes || '', foto: c.foto_url || c.foto || '', hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
   });
 
   window.API = {
@@ -85,6 +85,7 @@
         let rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden), producto_colores(*)').order('nombre').limit(5000);
         this._colores = !rows.error;
         if (this._colores && this._variantes === undefined) this._variantes = !(await sb.from('producto_colores').select('diseno').limit(1)).error;
+        if (this._variantes && this._fotosDis === undefined) this._fotosDis = !(await sb.from('producto_colores').select('foto_url').limit(1)).error;
         if (rows.error) rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden)').order('nombre').limit(5000);
         const arr = ok(rows); if (arr.length) this._campanas = ('archivado' in arr[0]);
         return arr.map(normProd);
@@ -125,10 +126,13 @@
         const nombres = new Set(colores.map((c) => c.color.trim()));
         const sobran = actuales.filter((a) => !nombres.has(a.color)).map((a) => a.id);
         if (colores.length) {
-          const filas = colores.map((c, i) => ({ producto_id: id, color: c.color.trim(), hex: /^#[0-9a-f]{6}$/i.test(c.hex || '') ? c.hex : null, cantidad: parseInt(c.cantidad, 10) || 0, orden: i, diseno: c.diseno || null, tono: c.tono || null, hexes: c.hexes || null }));
-          const quitar = ({ diseno, tono, hexes, ...resto }) => resto;   // si aún no se corrió migracion_disenos.sql
-          let r = await sb.from('producto_colores').upsert(this._variantes === false ? filas.map(quitar) : filas, { onConflict: 'producto_id,color' });
-          if (r.error && this._variantes !== false && /diseno|tono|column/i.test(r.error.message || '')) { this._variantes = false; r = await sb.from('producto_colores').upsert(filas.map(quitar), { onConflict: 'producto_id,color' }); }
+          const filas = colores.map((c, i) => ({ producto_id: id, color: c.color.trim(), hex: /^#[0-9a-f]{6}$/i.test(c.hex || '') ? c.hex : null, cantidad: parseInt(c.cantidad, 10) || 0, orden: i, diseno: c.diseno || null, tono: c.tono || null, hexes: c.hexes || null, foto_url: /^https?:\/\//i.test(c.foto || '') ? c.foto : null }));
+          const sinFoto = ({ foto_url, ...r }) => r;                       // si aún no se corrió migracion_fotos_disenos.sql
+          const sinVariantes = ({ diseno, tono, hexes, foto_url, ...r }) => r;   // si aún no se corrió migracion_disenos.sql
+          const preparar = () => filas.map(this._variantes === false ? sinVariantes : this._fotosDis === false ? sinFoto : (x) => x);
+          let r = await sb.from('producto_colores').upsert(preparar(), { onConflict: 'producto_id,color' });
+          if (r.error && /foto_url/i.test(r.error.message || '') && this._fotosDis !== false) { this._fotosDis = false; r = await sb.from('producto_colores').upsert(preparar(), { onConflict: 'producto_id,color' }); }
+          if (r.error && this._variantes !== false && /diseno|tono|hexes|column/i.test(r.error.message || '')) { this._variantes = false; r = await sb.from('producto_colores').upsert(preparar(), { onConflict: 'producto_id,color' }); }
           ok(r);
         }
         if (sobran.length) ok(await sb.from('producto_colores').delete().in('id', sobran));

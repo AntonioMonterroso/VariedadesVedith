@@ -849,3 +849,7 @@ input, select, textarea { font-size: max(16px, 1rem); } /* iOS hace zoom automá
 .dis-tag svg { width: 12px; height: 12px; }
 .ve-grupo { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
 .ve-cab { display: flex; align-items: center; gap: 8px; }
+
+/* Foto de cada diseño */
+.var-th { display: inline-block; width: 30px; height: 30px; border-radius: 8px; overflow: hidden; flex: none; cursor: zoom-in; background: var(--surface-2); vertical-align: middle; }
+.var-th img { width: 100%; height: 100%; object-fit: cover; display: block; }

@@ -59,7 +59,7 @@
     if (p.usa_colores) {
       const nombre = (color || '').trim() || 'Sin especificar';
       let c = p.colores.find((k) => k.color === nombre);
-      if (!c) { if (n < 0) return; c = { id: uid(), color: nombre, diseno: diseno || '', tono: tono || (diseno ? '' : nombre), hexes: hexes || '', hex: hex || '', cantidad: 0, orden: p.colores.length }; p.colores.push(c); }
+      if (!c) { if (n < 0) return; c = { id: uid(), color: nombre, diseno: diseno || '', tono: tono || (diseno ? '' : nombre), hexes: hexes || '', foto: ((p.colores.find((x) => diseno && x.diseno === diseno && x.foto) || {}).foto) || '', hex: hex || '', cantidad: 0, orden: p.colores.length }; p.colores.push(c); }
       c.cantidad = Math.max(0, c.cantidad + n);
       p.cantidad = p.colores.reduce((s, k) => s + k.cantidad, 0);
     } else p.cantidad = Math.max(0, p.cantidad + n);
@@ -117,7 +117,7 @@
       };
       const cols = p.usa_colores ? (p.colores || []).filter((c) => (c.color || '').trim()) : [];
       row.usa_colores = cols.length > 0;
-      row.colores = cols.map((c, i) => ({ id: c.id || uid(), color: c.color.trim(), diseno: c.diseno || '', tono: c.tono || '', hexes: c.hexes || '', hex: c.hex || '', cantidad: parseInt(c.cantidad, 10) || 0, orden: i }));
+      row.colores = cols.map((c, i) => ({ id: c.id || uid(), color: c.color.trim(), diseno: c.diseno || '', tono: c.tono || '', hexes: c.hexes || '', foto: c.foto || '', hex: c.hex || '', cantidad: parseInt(c.cantidad, 10) || 0, orden: i }));
       if (row.usa_colores) row.cantidad = row.colores.reduce((s, c) => s + c.cantidad, 0);
       if (p.id) Object.assign(db.productos.find((x) => x.id === p.id), row);
       else { db.seq += 1; p.id = uid(); db.productos.push({ id: p.id, codigo: 'VED-' + String(db.seq).padStart(4, '0'), etiqueta_impresa_at: null, created_at: now(), ...row }); }
@@ -273,7 +273,7 @@
     async publicProducto(codigo) {
       const p = db.productos.find((x) => x.codigo === codigo && x.activo);
       return delay({
-        producto: p ? { codigo: p.codigo, nombre: p.nombre, descripcion: p.descripcion, categoria: catName(p.categoria_id), precio: p.precio, disponible: p.cantidad > 0 || p.avisar_stock === false, fotos: p.fotos, colores: p.usa_colores ? p.colores.map((c) => ({ color: c.color, hex: c.hex, disponible: c.cantidad > 0 || p.avisar_stock === false })) : [] } : null,
+        producto: p ? { codigo: p.codigo, nombre: p.nombre, descripcion: p.descripcion, categoria: catName(p.categoria_id), precio: p.precio, disponible: p.cantidad > 0 || p.avisar_stock === false, fotos: p.fotos, colores: p.usa_colores ? p.colores.map((c) => ({ color: c.color, hex: c.hex, diseno: c.diseno || null, tono: c.tono || null, hexes: c.hexes || null, foto: c.foto || '', disponible: c.cantidad > 0 || p.avisar_stock === false })) : [] } : null,
         config: { nombre_negocio: db.config.nombre_negocio, whatsapp: db.config.whatsapp }
       });
     },
