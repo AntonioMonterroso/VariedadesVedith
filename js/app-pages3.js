@@ -188,9 +188,11 @@
     };
     const recalc = () => { if (!montoManual) g('#cjMonto').value = sum(items, (i) => i.cantidad * i.costo_unitario).toFixed(2); };
     g('#cjMonto').addEventListener('input', () => { montoManual = true; });
-    const agregar = (p) => {
-      const ya = items.find((i) => i.producto_id === p.id);
-      if (ya) ya.cantidad += 1; else items.push({ producto_id: p.id, producto_nombre: p.nombre, cantidad: 1, costo_unitario: Number(p.costo) || 0 });
+    const agregar = (p, color) => {
+      // producto con colores: se pide de qué color viene en la caja
+      if (p.usa_colores && p.colores.length && color === undefined) { APP.elegirColor(p, (c) => agregar(p, c), { todos: true, siempre: true }); return; }
+      const ya = items.find((i) => i.producto_id === p.id && (i.color || null) === (color || null));
+      if (ya) ya.cantidad += 1; else items.push({ producto_id: p.id, producto_nombre: p.nombre + (color ? ` (${color})` : ''), color: color || null, cantidad: 1, costo_unitario: Number(p.costo) || 0 });
       pintarItems(); recalc();
     };
     if (!bloqueada) {

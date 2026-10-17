@@ -35,6 +35,8 @@
     PIN_REPETIDO: 'Ese PIN ya lo usa la otra cuenta. Elige uno distinto.',
     PIN_INVALIDO: 'El PIN debe tener exactamente 6 números.',
     MAXIMO_5_FOTOS: 'Máximo 5 fotos por producto.',
+    COLOR_REQUERIDO: 'Elige de qué color es.',
+    COLOR_NO_ENCONTRADO: 'Ese color ya no existe en el producto.',
     CUENTA_REQUERIDA: 'Elige a qué cuenta entró el dinero.',
     CUENTA_INVALIDA: 'Esa cuenta ya no está disponible.',
     METODO_INVALIDO: 'Elige cómo pagó el cliente.'
@@ -69,11 +71,12 @@
   };
   APP.prod = (id) => APP.productos.find((p) => p.id === id);
   APP.prodByCode = (c) => APP.productos.find((p) => p.codigo.toLowerCase() === String(c).toLowerCase());
-  APP.stockEstado = (p) => (p.cantidad <= 0 ? 'agotado' : p.cantidad <= (p.stock_minimo ?? 2) ? 'poco' : 'ok');
+  APP.stockEstado = (p) => (p.avisar_stock === false ? 'ok' : p.cantidad <= 0 ? 'agotado' : p.cantidad <= (p.stock_minimo ?? 2) ? 'poco' : 'ok');
   APP.stockPill = (p) => {
     const e = APP.stockEstado(p);
     if (e === 'agotado') return '<span class="pill bad">Agotado</span>';
     if (e === 'poco') return `<span class="pill warn">Quedan ${p.cantidad}</span>`;
+    if (p.avisar_stock === false && p.cantidad <= 0) return '<span class="pill">0 en stock</span>';
     return `<span class="pill ok">${p.cantidad} disponibles</span>`;
   };
 
@@ -111,6 +114,7 @@
   }
   function moreItems() {
     return isAdmin() ? [
+      { id: 'ingreso', label: 'Ingreso rápido', icon: 'plus' },
       { id: 'cajas', label: 'Cajas (pedidos)', icon: 'box' },
       { id: 'dinero', label: 'Dinero y depósitos', icon: 'wallet' },
       { id: 'cobrar', label: 'Por cobrar', icon: 'users' },
@@ -210,7 +214,7 @@
   APP.render = async function (animar) {
     if (!APP.user) return;
     let { id, params } = APP.route();
-    const adminOnly = ['inicio', 'ventas', 'dulces', 'catalogos', 'pendientes', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'notificaciones', 'ajustes'];
+    const adminOnly = ['inicio', 'ventas', 'ingreso', 'dulces', 'catalogos', 'pendientes', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'notificaciones', 'ajustes'];
     if (!isAdmin() && adminOnly.includes(id)) id = 'productos';
     if (isAdmin() && id === 'mis-ventas') id = 'ventas';
     const page = APP.pages[id] || APP.pages[isAdmin() ? 'inicio' : 'productos'];
@@ -270,17 +274,18 @@
           <div class="row wrap">${p.categoria ? `<span class="pill pink">${esc(p.categoria)}</span>` : ''}${APP.stockPill(p)}${ad && !p.activo ? '<span class="pill">Oculto</span>' : ''}</div>
         </div>
         ${p.descripcion ? `<p class="muted">${esc(p.descripcion)}</p>` : ''}
+        ${p.usa_colores && p.colores.length ? `<div class="stack-sm"><h3 style="font-size:1rem">Colores</h3><div class="list">${p.colores.map((c) => `<div class="item" style="padding:10px 14px">${APP.dot(c.color, c.hex)}<span class="grow t1">${esc(c.color)}</span>${APP.pillColor(p, c)}</div>`).join('')}</div></div>` : ''}
         ${p.precio_regateo != null ? (ad
           ? `<div class="banner info">${icon('tag')}<span class="small">Descuento (Regateo): <b class="num">${money(p.precio_regateo)}</b> — el precio más bajo al que se puede vender.</span></div>`
           : `<div class="stack-sm"><button type="button" class="btn ghost sm" id="regBtn" aria-expanded="false" style="justify-self:start">${icon('tag', 'sm')} Descuento (Regateo)</button>
              <div id="regBox" hidden class="row wrap"><span class="muted small">Último precio:</span><b class="num" style="font-size:1.15rem">${money(p.precio_regateo)}</b>
-             <button type="button" class="btn secondary sm" data-a="vender-reg" ${p.cantidad <= 0 ? 'disabled' : ''}>Vender a este precio</button></div></div>`) : ''}
+             <button type="button" class="btn secondary sm" data-a="vender-reg" ${APP.sinStock(p) ? 'disabled' : ''}>Vender a este precio</button></div></div>`) : ''}
         <dl class="kv card flat">
           <dt>Código</dt><dd>${esc(p.codigo)}</dd>
           ${ad ? `<dt>Código Tupperware</dt><dd>${p.codigo_tupperware ? esc(p.codigo_tupperware) : '<span class="faint">sin anotar</span>'}</dd>
           <dt>Costo</dt><dd class="num">${money(p.costo)}</dd>
           <dt>Ganancia por pieza</dt><dd class="num">${money(gan)}</dd>
-          <dt>Mínimo antes de avisar</dt><dd>${p.stock_minimo}</dd>
+          <dt>Aviso de poco stock</dt><dd>${p.avisar_stock === false ? 'Apagado' : 'Con ' + p.stock_minimo + ' o menos'}</dd>
           <dt>Etiqueta QR</dt><dd>${p.etiqueta_impresa_at ? `Impresa · ${U.fmtDate(p.etiqueta_impresa_at)}` : '<span class="pill warn">Sin imprimir</span>'}</dd>` : ''}
         </dl>
         <div class="row wrap">
@@ -288,17 +293,18 @@
           <button type="button" class="btn secondary sm" data-a="qr">${icon('qr', 'sm')} Ver QR</button>` : ''}
         </div>`,
       footer: `${ad ? `<button type="button" class="btn secondary" data-a="editar">${icon('edit')} Editar</button>` : ''}
-               <button type="button" class="btn" data-a="vender" ${p.cantidad <= 0 ? 'disabled' : ''}>${icon('bag')} Vender</button>`
+               <button type="button" class="btn" data-a="vender" ${APP.sinStock(p) ? 'disabled' : ''}>${icon('bag')} Vender</button>`
     });
     APP.bindGallery(m.body, p.fotos, p.nombre);
     const on = (a, fn) => { m.el.querySelectorAll(`[data-a="${a}"]`).forEach((b) => b.addEventListener('click', fn)); };
-    on('vender', () => { m.close(); APP.addToCart(p.id); APP.go('vender'); });
-    on('vender-reg', () => { m.close(); APP.addToCart(p.id, { regateo: true }); APP.go('vender'); });
+    const irVender = () => { if (APP.current === 'vender') APP.render(); else APP.go('vender'); };
+    on('vender', () => { m.close(); APP.addToCart(p.id, { despues: irVender }); });
+    on('vender-reg', () => { m.close(); APP.addToCart(p.id, { regateo: true, despues: irVender }); });
     const rb = m.body.querySelector('#regBtn');
     if (rb) rb.addEventListener('click', () => { const box = m.body.querySelector('#regBox'); box.hidden = !box.hidden; rb.setAttribute('aria-expanded', String(!box.hidden)); });
     on('editar', () => { m.close(); APP.openProductoForm(p); });
     on('qr', () => APP.openQR(p));
-    on('ingreso', () => ingresoMercaderia(p, m));
+    on('ingreso', () => { m.close(); APP.loteInicial = [p.id]; APP.go('ingreso'); });
   };
 
   function ingresoMercaderia(p, parent) {
@@ -347,7 +353,7 @@
   /* ---------- formulario de producto (admin) ---------- */
   APP.openProductoForm = function (p, opts = {}) {
     const nuevo = !p;
-    p = p || { nombre: '', categoria_id: '', descripcion: '', precio: '', costo: '', precio_regateo: '', cantidad: 1, stock_minimo: 2, codigo_tupperware: '', activo: true, fotos: [], ...(opts.prefill || {}) };
+    p = p || { nombre: '', categoria_id: '', descripcion: '', precio: '', costo: '', precio_regateo: '', cantidad: 1, stock_minimo: 2, codigo_tupperware: '', activo: true, fotos: [], usa_colores: false, avisar_stock: true, colores: [], ...(opts.prefill || {}) };
     const catOpts = APP.categorias.map((c) => `<option value="${esc(c.id)}" ${c.id === p.categoria_id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('');
     const slots = Math.min(5, Math.max(1, (p.fotos || []).length + (nuevo || (p.fotos || []).length < 5 ? 1 : 0)));
     const m = openModal({
@@ -365,9 +371,17 @@
           <label class="field">Costo<input class="input" id="pfCosto" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(p.costo)}" placeholder="0.00"></label>
           <label class="field">Cantidad<input class="input" id="pfCant" type="number" inputmode="numeric" min="0" value="${esc(p.cantidad)}"></label>
         </div>
+        <section class="stack-sm">
+          <label class="row"><input type="checkbox" id="pfUsaCol" ${p.usa_colores ? 'checked' : ''} ${API._colores === false ? 'disabled' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Viene en varios colores</b> <span class="small muted">Cada color lleva su propia existencia.</span></span></label>
+          ${API._colores === false ? `<div class="banner">${icon('alert')}<span class="small">Para usar colores falta correr <b>migracion_colores.sql</b> en Supabase.</span></div>` : ''}
+          <div id="pfColBox" ${p.usa_colores ? '' : 'hidden'}></div>
+        </section>
         <label class="field">Descuento (Regateo) <span class="hint">Opcional. El precio más bajo al que aceptas vender. Se muestra aparte del precio principal; quien vende lo ve solo si lo toca.</span>
           <input class="input" id="pfReg" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(p.precio_regateo ?? '')}" placeholder="Ej.: 135"></label>
-        <label class="field">Avisarme cuando queden<input class="input" id="pfMin" type="number" inputmode="numeric" min="0" value="${esc(p.stock_minimo)}"><span class="hint">Piezas o menos: sale la alerta de poco stock.</span></label>
+        <section class="stack-sm">
+          <label class="row"><input type="checkbox" id="pfAvisar" ${p.avisar_stock !== false ? 'checked' : ''} ${API._colores === false ? 'disabled' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Avisarme cuando se acabe</b> <span class="small muted">Si lo apagas no sale la alerta de poco stock y se puede vender aunque ya no haya.</span></span></label>
+          <label class="field" id="pfMinBox" ${p.avisar_stock !== false ? '' : 'hidden'}>Avisarme cuando queden<input class="input" id="pfMin" type="number" inputmode="numeric" min="0" value="${esc(p.stock_minimo)}"><span class="hint">Piezas o menos: sale la alerta de poco stock.</span></label>
+        </section>
         <label class="field">Descripción<textarea class="input" id="pfDesc" maxlength="500" placeholder="Para qué sirve, medidas, colores…">${esc(p.descripcion || '')}</textarea></label>
         <fieldset class="stack-sm" style="border:0;padding:0;margin:0">
           <legend class="small" style="font-weight:800;margin-bottom:6px">Fotos (links de internet, hasta 5)</legend>
@@ -381,6 +395,17 @@
         <button type="button" class="btn secondary" data-no>Cancelar</button><button type="button" class="btn" id="pfSave">Guardar</button>`
     });
 
+    // ---- colores y aviso de stock
+    const colBox = m.body.querySelector('#pfColBox'), chkCol = m.body.querySelector('#pfUsaCol'), chkAv = m.body.querySelector('#pfAvisar');
+    let ed = null;
+    const montarEd = () => {
+      const base = (p.colores && p.colores.length) ? p.colores : (Number(p.cantidad) > 0 && !nuevo ? [{ color: '', hex: '', cantidad: p.cantidad }] : []);
+      ed = APP.editorColores(colBox, base, { onChange: (t) => { m.body.querySelector('#pfCant').value = t; } });
+      m.body.querySelector('#pfCant').value = ed.total();
+    };
+    const alternarCol = () => { const on = chkCol.checked; colBox.hidden = !on; m.body.querySelector('#pfCant').disabled = on; if (on && !ed) montarEd(); };
+    chkCol.addEventListener('change', alternarCol); alternarCol();
+    chkAv.addEventListener('change', () => { m.body.querySelector('#pfMinBox').hidden = !chkAv.checked; });
     const fotosBox = m.body.querySelector('#pfFotos');
     const addSlot = (val = '') => {
       if (fotosBox.children.length >= 5) return;
@@ -429,11 +454,17 @@
       if (reg !== '' && Number(reg) > Number(precio)) { g('#pfReg').classList.add('bad'); g('#pfReg').focus(); return toast('El precio con descuento no puede ser mayor al precio de venta.', { error: true }); }
       const fotos = [...fotosBox.querySelectorAll('input')].map((i) => U.imageUrl(i.value)).filter(Boolean);
       if (fotos.some((u) => !U.validUrl(u))) return toast('Alguna foto tiene un link inválido. Debe empezar con https://', { error: true });
+      const usa = chkCol.checked; let colores = [];
+      if (usa) {
+        const r = ed.get(); if (r.error) return toast(r.error, { error: true });
+        colores = r.colores; if (!colores.length) return toast('Agrega al menos un color, o desmarca «Viene en varios colores».', { error: true });
+      }
       const btn = m.foot.querySelector('#pfSave'); btn.disabled = true;
       try {
         const id = await API.saveProducto({
+          usa_colores: usa, colores, avisar_stock: chkAv.checked,
           id: p.id, nombre, categoria_id: g('#pfCat').value, descripcion: g('#pfDesc').value, precio,
-          costo: g('#pfCosto').value, precio_regateo: reg, cantidad: g('#pfCant').value, stock_minimo: g('#pfMin').value,
+          costo: g('#pfCosto').value, precio_regateo: reg, cantidad: usa ? colores.reduce((s, c) => s + c.cantidad, 0) : g('#pfCant').value, stock_minimo: g('#pfMin').value,
           codigo_tupperware: g('#pfTup').value, activo: g('#pfActivo').checked, fotos
         });
         await APP.refreshCore(); m.close();
@@ -453,7 +484,7 @@
   APP.productoItem = (p, tag = 'button') => `
     <${tag} type="button" class="item" data-id="${esc(p.id)}">
       <span class="thumb">${p.fotos && p.fotos[0] ? U.imgTag(p.fotos[0], '') : icon('image')}</span>
-      <span class="grow"><div class="t1 ellipsis">${esc(p.nombre)}</div><div class="t2">${esc(p.codigo)}${isAdmin() && p.codigo_tupperware ? ' · Tupperware ' + esc(p.codigo_tupperware) : ''}</div></span>
+      <span class="grow"><div class="t1 ellipsis">${esc(p.nombre)}</div><div class="t2">${esc(p.codigo)}${isAdmin() && p.codigo_tupperware ? ' · Tupperware ' + esc(p.codigo_tupperware) : ''} ${APP.dots ? APP.dots(p, 5) : ''}</div></span>
       <span style="text-align:right"><div class="amt num">${money(p.precio)}</div><div>${APP.stockPill(p)}</div></span>
     </${tag}>`;
 

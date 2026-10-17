@@ -33,7 +33,12 @@
     cantidad: r.cantidad, stock_minimo: r.stock_minimo == null ? 2 : r.stock_minimo,
     activo: r.activo !== false, etiqueta_impresa_at: r.etiqueta_impresa_at || null,
     fotos: Array.isArray(r.fotos) ? r.fotos
-      : (r.fotos_producto || []).slice().sort((a, b) => a.orden - b.orden).map((f) => f.url_foto)
+      : (r.fotos_producto || []).slice().sort((a, b) => a.orden - b.orden).map((f) => f.url_foto),
+    usa_colores: !!r.usa_colores,
+    avisar_stock: r.avisar_stock !== false && r.sin_control !== true,
+    colores: (r.producto_colores || r.colores || []).slice()
+      .sort((a, b) => (a.orden || 0) - (b.orden || 0) || String(a.color).localeCompare(String(b.color), 'es'))
+      .map((c) => ({ id: c.id, color: c.color, hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
   });
 
   window.API = {
@@ -75,12 +80,17 @@
 
     async productos() {
       if (session.rol === 'administrador') {
-        const rows = ok(await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden)').order('nombre').limit(5000));
-        return rows.map(normProd);
+        // Si aún no se corrió migracion_colores.sql, se pide sin colores para que nada se rompa
+        let rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden), producto_colores(*)').order('nombre').limit(5000);
+        this._colores = !rows.error;
+        if (rows.error) rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden)').order('nombre').limit(5000);
+        return ok(rows).map(normProd);
       }
       const rows = ok(await sb.from('vista_catalogo').select('*').order('nombre').limit(5000));
       return rows.map(normProd);
     },
+    // Suma piezas a varios productos y colores de una vez: [{producto_id, color|null, cantidad}]
+    async ingresoRapido(items) { return ok(await sb.rpc('ingreso_rapido', { p_items: items })); },
 
     async saveProducto(p) {
       const row = {
@@ -90,6 +100,12 @@
         stock_minimo: parseInt(p.stock_minimo, 10) || 0, activo: p.activo !== false,
         codigo_tupperware: (p.codigo_tupperware || '').trim() || null
       };
+      const colores = p.usa_colores ? (p.colores || []).filter((c) => (c.color || '').trim()) : [];
+      if (this._colores) {
+        row.usa_colores = !!p.usa_colores && colores.length > 0;
+        row.avisar_stock = p.avisar_stock !== false;
+        if (row.usa_colores) row.cantidad = colores.reduce((s, c) => s + (parseInt(c.cantidad, 10) || 0), 0);
+      }
       if (p.precio_catalogo !== undefined) row.precio_catalogo = p.precio_catalogo === '' || p.precio_catalogo == null ? null : Number(p.precio_catalogo);
       let id = p.id;
       if (id) ok(await sb.from('productos').update(row).eq('id', id));
@@ -98,6 +114,16 @@
       ok(await sb.from('fotos_producto').delete().eq('producto_id', id));
       const fotos = (p.fotos || []).filter(Boolean).slice(0, 5).map((url, i) => ({ producto_id: id, url_foto: url, orden: i }));
       if (fotos.length) ok(await sb.from('fotos_producto').insert(fotos));
+      if (this._colores) {
+        // el producto ya quedó guardado (con usa_colores al día); ahora se igualan sus colores
+        const actuales = ok(await sb.from('producto_colores').select('id, color').eq('producto_id', id));
+        const nombres = new Set(colores.map((c) => c.color.trim()));
+        const sobran = actuales.filter((a) => !nombres.has(a.color)).map((a) => a.id);
+        if (colores.length) {
+          ok(await sb.from('producto_colores').upsert(colores.map((c, i) => ({ producto_id: id, color: c.color.trim(), hex: /^#[0-9a-f]{6}$/i.test(c.hex || '') ? c.hex : null, cantidad: parseInt(c.cantidad, 10) || 0, orden: i })), { onConflict: 'producto_id,color' }));
+        }
+        if (sobran.length) ok(await sb.from('producto_colores').delete().in('id', sobran));
+      }
       return id;
     },
     async deleteProducto(id) { ok(await sb.from('productos').delete().eq('id', id)); },
@@ -112,7 +138,8 @@
         p_producto_id: l.producto_id, p_cantidad: l.cantidad, p_vendido_por: l.vendido_por,
         p_forma_pago: l.forma_pago, p_cliente_nombre: l.cliente_nombre || null, p_cliente_telefono: l.cliente_telefono || null,
         p_fecha_limite: l.fecha_limite || null, p_precio: l.precio == null ? null : l.precio,
-        p_metodo: l.metodo_cobro || 'efectivo', p_cuenta_id: l.cuenta_id || null
+        p_metodo: l.metodo_cobro || 'efectivo', p_cuenta_id: l.cuenta_id || null,
+        ...(l.color ? { p_color: l.color } : {})
       });
       if (error) fail(error);
       return data;
@@ -149,7 +176,7 @@
       else id = ok(await sb.from('cajas').insert(row).select('id').single()).id;
       if (c.items) {
         ok(await sb.from('caja_items').delete().eq('caja_id', id));
-        const items = c.items.map((i) => ({ caja_id: id, producto_id: i.producto_id || null, producto_nombre: i.producto_nombre, cantidad: parseInt(i.cantidad, 10), costo_unitario: Number(i.costo_unitario) || 0 }));
+        const items = c.items.map((i) => ({ caja_id: id, producto_id: i.producto_id || null, producto_nombre: i.producto_nombre, cantidad: parseInt(i.cantidad, 10), costo_unitario: Number(i.costo_unitario) || 0, ...(i.color ? { color: i.color } : {}) }));
         if (items.length) ok(await sb.from('caja_items').insert(items));
       }
       return id;

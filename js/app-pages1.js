@@ -61,7 +61,7 @@
         </div>
         <div class="actions">
           <a class="action" href="#/vender"><span class="ic">${icon('bag', 'lg')}</span>Vender</a>
-          <button type="button" class="action" id="acNuevo"><span class="ic">${icon('plus', 'lg')}</span>Producto nuevo</button>
+          <a class="action" href="#/ingreso"><span class="ic">${icon('plus', 'lg')}</span>Ingreso rápido</a>
           <a class="action" href="#/cajas"><span class="ic">${icon('box', 'lg')}</span>Cajas</a>
           <a class="action" href="#/etiquetas"><span class="ic">${icon('printer', 'lg')}</span>Imprimir etiquetas</a>
         </div>
@@ -71,7 +71,6 @@
         </section>
         ${bajos.length ? `<section class="stack-sm"><h2>Para reponer</h2><div class="list">${bajos.slice(0, 6).map((p) => APP.productoItem(p)).join('')}</div></section>` : ''}
       </div>`;
-    main.querySelector('#acNuevo').addEventListener('click', () => APP.openProductoForm());
     main.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => APP.openFicha(APP.prod(b.dataset.id))));
   };
 
@@ -95,7 +94,7 @@
     const cats = APP.categorias;
     main.innerHTML = `
       <div class="page-head"><div><h1>${ad ? 'Productos' : 'Catálogo'}</h1><p class="sub" id="pCount"></p></div>
-        ${ad ? `<button type="button" class="btn" id="pNuevo">${icon('plus')} Producto</button>` : ''}</div>
+        ${ad ? `<div class="row wrap"><a class="btn secondary" href="#/ingreso">${icon('package')} Ingreso rápido</a><button type="button" class="btn" id="pNuevo">${icon('plus')} Producto</button></div>` : ''}</div>
       <div class="toolbar">
         <div class="searchbox">${icon('search')}<input class="input" id="pQ" type="search" placeholder="Buscar por nombre o código…" autocomplete="off" value="${esc(F.q)}"></div>
         <div class="chips" id="pCats" role="group" aria-label="Categorías">
@@ -125,7 +124,7 @@
           <div class="foto">${p.fotos && p.fotos[0] ? U.imgTag(p.fotos[0], p.nombre) : U.placeholder('Sin foto')}
             <div class="tags">${APP.stockEstado(p) === 'agotado' ? '<span class="pill bad">Agotado</span>' : APP.stockEstado(p) === 'poco' ? `<span class="pill warn">Quedan ${p.cantidad}</span>` : ''}${ad && !p.etiqueta_impresa_at ? '<span class="pill pink">Sin etiqueta</span>' : ''}${ad && !p.activo ? '<span class="pill">Oculto</span>' : ''}</div>
           </div>
-          <div class="prod-info"><div class="nm">${esc(p.nombre)}</div><div class="pr num">${money(p.precio)}</div><div class="meta">${esc(p.codigo)} · ${p.cantidad} disp.</div></div>
+          <div class="prod-info"><div class="nm">${esc(p.nombre)}</div><div class="pr num">${money(p.precio)}</div><div class="meta">${esc(p.codigo)} · ${p.cantidad} disp. ${APP.dots(p)}</div></div>
         </button>`).join('') : `<div class="empty" style="grid-column:1/-1"><img src="assets/logo-pequeno.png" alt="">
           <p>${APP.productos.length ? 'No encontré productos con esos filtros.' : ad ? 'Aún no hay productos. Agrega el primero.' : 'El catálogo está vacío por ahora.'}</p>
           ${ad && !APP.productos.length ? '<button type="button" class="btn" id="pVacioNuevo">Agregar producto</button>' : ''}</div>`;
@@ -150,11 +149,16 @@
      ===================================================================== */
   APP.addToCart = function (id, opts = {}) {
     const p = APP.prod(id); if (!p) return;
-    let l = APP.cart.find((x) => x.id === id);
-    if (l) { if (l.cant < p.cantidad) l.cant += 1; else toast('No hay más existencia de ese producto.', { error: true }); }
-    else if (p.cantidad > 0) { l = { id, cant: 1, precio: null }; APP.cart.push(l); }
-    else toast('Ese producto está agotado.', { error: true });
+    // producto con colores: primero se elige el color
+    if (p.usa_colores && p.colores.length && !opts.color) { APP.elegirColor(p, (color) => APP.addToCart(id, { ...opts, color })); return; }
+    const color = p.usa_colores ? opts.color || null : null;
+    const max = APP.maxVenta(p, color);
+    let l = APP.cart.find((x) => x.id === id && (x.color || null) === color);
+    if (l) { if (l.cant < max) l.cant += 1; else toast('No hay más existencia de ese producto.', { error: true }); }
+    else if (max > 0) { l = { id, color, cant: 1, precio: null }; APP.cart.push(l); }
+    else toast(color ? `El color ${color} está agotado.` : 'Ese producto está agotado.', { error: true });
     if (l && opts.regateo && p.precio_regateo != null) l.precio = p.precio_regateo;
+    if (opts.despues) opts.despues();
   };
   const form = () => (APP.ventaForm = APP.ventaForm || { forma: 'contado', cliente: '', tel: '', limite: '', quien: U.lsGet('vedith-vendedor', ''), metodo: 'efectivo', cuenta: '' });
 
@@ -181,12 +185,12 @@
 
           <section class="stack-sm" aria-label="Productos en la venta">
             ${lines.length ? lines.map((l) => `
-              <div class="cart-line" data-id="${esc(l.id)}">
-                <div class="grow"><div class="t1">${esc(l.p.nombre)}</div><div class="small muted">${esc(l.p.codigo)} · quedan ${l.p.cantidad}</div></div>
+              <div class="cart-line" data-k="${esc(l.id + '|' + (l.color || ''))}">
+                <div class="grow"><div class="t1">${esc(l.p.nombre)}${l.color ? ` <span style="display:inline-flex;gap:6px;align-items:center;vertical-align:middle">${APP.dot(l.color, ((l.p.colores || []).find((c) => c.color === l.color) || {}).hex)}<span class="small">${esc(l.color)}</span></span>` : ''}</div><div class="small muted">${esc(l.p.codigo)}${l.p.avisar_stock === false ? '' : ' · quedan ' + APP.maxVenta(l.p, l.color)}</div></div>
                 <button type="button" class="icon-btn" data-del aria-label="Quitar ${esc(l.p.nombre)}">${icon('x')}</button>
                 <div class="stepper" role="group" aria-label="Cantidad">
                   <button type="button" data-minus aria-label="Menos">${icon('minus')}</button>
-                  <input type="number" inputmode="numeric" min="1" max="${l.p.cantidad}" value="${l.cant}" aria-label="Cantidad">
+                  <input type="number" inputmode="numeric" min="1" ${APP.maxVenta(l.p, l.color) === Infinity ? '' : `max="${APP.maxVenta(l.p, l.color)}"`} value="${l.cant}" aria-label="Cantidad">
                   <button type="button" data-plus aria-label="Más">${icon('plus')}</button>
                 </div>
                 ${ad ? `<label class="field" style="justify-self:end;max-width:140px"><span class="xs muted">Precio c/u</span><input class="input" data-precio type="number" inputmode="decimal" min="0" step="0.01" value="${l.precio != null ? l.precio : l.p.precio}" style="min-height:42px;text-align:right"></label>`
@@ -240,18 +244,18 @@
         const list = APP.productos.filter((p) => p.activo !== false && APP.matchProducto(p, txt)).slice(0, 8);
         res.hidden = false;
         res.innerHTML = list.length ? list.map((p) => APP.productoItem(p)).join('') : '<div class="empty">No encontré ese producto.</div>';
-        res.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => { APP.addToCart(b.dataset.id); saveFormFields(); paint(); main.querySelector('#vQ').focus(); }));
+        res.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => { APP.addToCart(b.dataset.id, { despues: () => { saveFormFields(); paint(); const q2 = main.querySelector('#vQ'); if (q2) q2.focus(); } }); }));
       };
       q.addEventListener('input', pintarRes);
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const b = res.querySelector('[data-id]'); if (b) b.click(); } });
-      main.querySelector('#vScan').addEventListener('click', () => APP.openScanner({ onPick: (p) => { APP.addToCart(p.id); saveFormFields(); paint(); toast('Agregado: ' + p.nombre); } }));
+      main.querySelector('#vScan').addEventListener('click', () => APP.openScanner({ onPick: (p) => { APP.addToCart(p.id, { despues: () => { saveFormFields(); paint(); toast('Agregado: ' + p.nombre); } }); } }));
 
       main.querySelectorAll('.cart-line').forEach((row) => {
-        const l = APP.cart.find((x) => x.id === row.dataset.id), p = APP.prod(l.id);
-        const set = (n) => { l.cant = Math.min(p.cantidad, Math.max(1, n || 1)); saveFormFields(); paint(); };
+        const l = APP.cart.find((x) => x.id + '|' + (x.color || '') === row.dataset.k), p = APP.prod(l.id);
+        const set = (n) => { l.cant = Math.min(APP.maxVenta(p, l.color), Math.max(1, n || 1)); saveFormFields(); paint(); };
         row.querySelector('[data-del]').addEventListener('click', () => { APP.cart = APP.cart.filter((x) => x !== l); saveFormFields(); paint(); });
         row.querySelector('[data-minus]').addEventListener('click', () => set(l.cant - 1));
-        row.querySelector('[data-plus]').addEventListener('click', () => { if (l.cant >= p.cantidad) toast('No hay más existencia.', { error: true }); set(l.cant + 1); });
+        row.querySelector('[data-plus]').addEventListener('click', () => { if (l.cant >= APP.maxVenta(p, l.color)) toast('No hay más existencia.', { error: true }); set(l.cant + 1); });
         row.querySelector('.stepper input').addEventListener('change', (e) => set(parseInt(e.target.value, 10)));
         const on = (sel, fn) => { const b = row.querySelector(sel); if (b) b.addEventListener('click', fn); };
         on('[data-reg-ver]', () => { l.showReg = true; saveFormFields(); paint(); });
@@ -287,7 +291,7 @@
         const p = APP.prod(l.id);
         try {
           const r = await API.vender({
-            producto_id: l.id, cantidad: l.cant, vendido_por: quien, forma_pago: f.forma,
+            producto_id: l.id, color: l.color || null, cantidad: l.cant, vendido_por: quien, forma_pago: f.forma,
             cliente_nombre: f.cliente.trim(), cliente_telefono: f.tel, fecha_limite: f.forma === 'fiado' ? f.limite || null : null,
             precio: l.precio, metodo_cobro: f.forma === 'contado' ? f.metodo : null, cuenta_id: f.forma === 'contado' && f.metodo !== 'efectivo' ? f.cuenta : null
           });

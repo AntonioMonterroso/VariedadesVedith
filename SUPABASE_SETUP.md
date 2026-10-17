@@ -76,6 +76,12 @@ La lectura es automática pero no perfecta: a veces confunde un número o una le
 
 Es solo para la administradora: no sale en el catálogo, en las fichas del QR, en las imágenes para estados ni para el visualizador.
 
+## 10. Colores, stock por color y aviso de stock opcional
+1. En el SQL Editor pega **todo** `migracion_colores.sql` y dale **Run** (después de las otras migraciones). Hasta entonces el panel funciona igual, solo que sin colores.
+2. En un producto: **Viene en varios colores**. Tocas los colores que tiene y le pones cuántas piezas hay de cada uno; la cantidad total se suma sola. Al vender, al pedir una caja o al ingresar mercadería se elige el color.
+3. En un producto: **Avisarme cuando se acabe**. Si lo apagas, no sale la alerta de poco stock ni cuenta en «Poco o sin stock», y se puede vender aunque ya no haya (la existencia nunca baja de 0). Sirve para lo que haces bajo pedido.
+4. **Más → Ingreso rápido**: buscas o escaneas los productos, pones cuántas llegaron (por color si tiene) y se suma todo de una vez. También crea productos nuevos al vuelo con «Producto rápido».
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

@@ -823,3 +823,23 @@ input, select, textarea { font-size: max(16px, 1rem); } /* iOS hace zoom automá
 .dul-linea .field { min-width: 0; }
 @media (max-width: 420px) { .dul-linea .seg button { padding: 0 10px; font-size: .9rem; } }
 @media print { .recibo-print { text-align: center; } .recibo-print img { width: 150mm; max-width: 100%; height: auto; } }
+
+/* Colores por producto e ingreso rápido */
+.col-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--ink) 28%, transparent); flex: none; vertical-align: middle; }
+.col-dot.sin { background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 3px, var(--line-strong) 3px, var(--line-strong) 5px); }
+.col-dots { display: inline-flex; gap: 3px; align-items: center; vertical-align: middle; margin-left: 4px; }
+.col-dots .col-dot { width: 12px; height: 12px; }
+.col-chip .col-dot { width: 14px; height: 14px; }
+.col-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.col-row .input { min-height: 44px; }
+.col-pick { position: relative; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; cursor: pointer; }
+.col-pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.col-pick .col-dot { width: 28px; height: 28px; }
+@media (max-width: 480px) { .col-row { grid-template-columns: auto minmax(0, 1fr) auto; } .col-row .stepper { grid-column: 1 / 3; } }
+.lote-card { display: grid; gap: 12px; }
+.lote-fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lote-fila .stepper input { width: 64px; }
+.lote-bar { position: sticky; bottom: calc(var(--nav-h) + var(--safe-b) + 10px); z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 12px 14px; border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid var(--line); box-shadow: var(--shadow-2); }
+@media (min-width: 900px) { .lote-bar { bottom: 16px; } }
+.chip.col-chip[aria-pressed="true"] { background: var(--pink-100); color: var(--pink-700); border-color: var(--pink-600); }
