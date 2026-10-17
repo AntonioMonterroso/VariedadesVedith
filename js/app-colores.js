@@ -118,13 +118,13 @@
       if (t && !tonos.some((x) => igual(x.n, t))) tonos.push({ n: t, h: validHex(r.hex) ? r.hex : hexPorNombre(t), hs: r.hexes || '' });
       qty[llave(d, t)] = Number(r.cantidad) || 0;
     });
-    const existentes = new Set((rows || []).map((r) => llave(r.diseno || '', r.tono || (!r.diseno ? r.color : ''))));
+    const omit = new Set();   // combinaciones que quitó con ×
     let sinDis = (rows || []).some((r) => !r.diseno);   // lo que ya existía sin diseño se conserva como «Sin diseño»
     const efectivos = () => (dis.length ? [...(sinDis ? [''] : []), ...dis] : ['']);
     const combos = () => {
       if (!dis.length && !tonos.length) return [];
       const out = [];
-      efectivos().forEach((d) => (tonos.length ? tonos : [{ n: '', h: '', hs: '' }]).forEach((t) => { if (d || t.n) out.push({ d, t: t.n, h: t.h, hs: t.hs || '' }); }));
+      efectivos().forEach((d) => (tonos.length ? tonos : [{ n: '', h: '', hs: '' }]).forEach((t) => { if ((d || t.n) && !omit.has(llave(d, t.n))) out.push({ d, t: t.n, h: t.h, hs: t.hs || '' }); }));
       return out;
     };
     const total = () => combos().reduce((s, c) => s + (qty[llave(c.d, c.t)] || 0), 0);
@@ -139,7 +139,8 @@
             ${(tonos.length ? tonos : [{ n: '', h: '' }]).map((t) => {
               const k = llave(d, t.n);
               return `<div class="lote-fila" data-k="${esc(k)}">${t.n ? APP.dot(t.n, t.h, t.hs) : tagDis}<span class="grow t1">${esc(t.n || d)}</span>
-                <div class="stepper" role="group" aria-label="Existencia"><button type="button" data-minus aria-label="Menos">${icon('minus')}</button><input type="number" inputmode="numeric" min="0" value="${qty[k] || 0}" data-cant aria-label="Piezas"><button type="button" data-plus aria-label="Más">${icon('plus')}</button></div></div>`;
+                <div class="stepper" role="group" aria-label="Existencia"><button type="button" data-minus aria-label="Menos">${icon('minus')}</button><input type="number" inputmode="numeric" min="0" value="${qty[k] || 0}" data-cant aria-label="Piezas"><button type="button" data-plus aria-label="Más">${icon('plus')}</button></div>
+                <button type="button" class="icon-btn" data-omit aria-label="Quitar esta combinación" title="Quitar esta combinación (solo si no tiene piezas)">${icon('x')}</button></div>`;
             }).join('')}</div>`).join('');
       host.innerHTML = `<div class="stack">
         ${opts.piezasPrevias > 0 ? `<div class="banner">${icon('info')}<span class="small">Antes tenía ${opts.piezasPrevias} piezas sin repartir. Escríbelas en la opción que corresponda.</span></div>` : ''}
@@ -150,11 +151,13 @@
           <div class="chips" style="flex-wrap:wrap;overflow:visible">${nomCol.map(([n, h, hs]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" data-hs="${esc(hs)}" aria-pressed="${tonos.some((x) => igual(x.n, n))}">${APP.dot(n, h, hs)}${esc(n)}</button>`).join('')}</div>
           <button type="button" class="btn ghost sm" data-combinar style="justify-self:start">${icon('plus', 'sm')} Combinar dos o más colores</button>
           <div class="row"><label class="col-pick" aria-label="Tono del color nuevo"><input type="color" value="#cccccc" data-hc><span class="col-dot" style="background:#cccccc"></span></label><input class="input grow" data-nt maxlength="30" placeholder="Otro color" aria-label="Otro color"><button type="button" class="btn secondary sm" data-addt>Agregar</button></div></div>
+        ${grupos.length > 1 ? '<p class="small muted">Se guardan todas las combinaciones de abajo. Si alguna no existe (por ejemplo un diseño que no viene en cierto color), quítala con la ✕ (solo se puede si tiene 0 piezas).</p>' : ''}
         <label class="row small"><input type="checkbox" data-guardar checked style="width:20px;height:20px;accent-color:var(--pink-600)"> <span>Guardar lo nuevo en mis predeterminados para la próxima</span></label>
         <div class="stack-sm" data-filas>${filas}</div>
         <div class="row between small"><span class="muted">Total de piezas</span><b class="num" data-total>${total()}</b></div></div>`;
 
       const alternar = (lista, nombre, extra) => {
+        omit.clear();
         const i = lista.findIndex((x) => igual(x.n || x, nombre));
         if (i >= 0) lista.splice(i, 1); else lista.push(extra || nombre);
       };
@@ -181,15 +184,16 @@
         cant.addEventListener('input', () => poner(parseInt(cant.value, 10) || 0));
         fila.querySelector('[data-minus]').addEventListener('click', () => poner((parseInt(cant.value, 10) || 0) - 1));
         fila.querySelector('[data-plus]').addEventListener('click', () => poner((parseInt(cant.value, 10) || 0) + 1));
+        const om = fila.querySelector('[data-omit]');
+        if ((qty[k] || 0) > 0) om.disabled = true; else om.addEventListener('click', () => { omit.add(k); pintar(); aviso(); });
       });
     }
     pintar();
     return {
       total,
       get() {
-        // solo las combinaciones con piezas o que ya existían; si no hay ninguna, todas
-        const todas = combos(), usadas = todas.filter((c) => (qty[llave(c.d, c.t)] || 0) > 0 || existentes.has(llave(c.d, c.t)));
-        return { colores: (usadas.length ? usadas : todas).map((c) => ({ color: [c.d, c.t].filter(Boolean).join(' · '), diseno: c.d || null, tono: c.t || null, hex: c.t && validHex(c.h) ? c.h : '', hexes: c.t && String(c.hs || '').split(',').filter(validHex).length > 1 ? c.hs : '', cantidad: qty[llave(c.d, c.t)] || 0 })) };
+        // se guardan todas las combinaciones que se ven (aunque tengan 0 piezas); con × se quitan las que no existen
+        return { colores: combos().map((c) => ({ color: [c.d, c.t].filter(Boolean).join(' · '), diseno: c.d || null, tono: c.t || null, hex: c.t && validHex(c.h) ? c.h : '', hexes: c.t && String(c.hs || '').split(',').filter(validHex).length > 1 ? c.hs : '', cantidad: qty[llave(c.d, c.t)] || 0 })) };
       }
     };
   };
