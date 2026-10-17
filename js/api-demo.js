@@ -3,7 +3,7 @@
    Sirve para enseñar el panel sin tocar la base real. */
 (function () {
   'use strict';
-  const KEY = 'vedith-demo-v6';
+  const KEY = 'vedith-demo-v7';
   const PIN = { administrador: '111111', visualizador: '222222' };
   const ymdHoy = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
@@ -44,6 +44,7 @@
     Object.assign(productos[1], { usa_colores: true, colores: colores([['Rojo', '#D8473F', 5], ['Azul', '#2F6FD0', 6], ['Verde', '#2E9A5B', 3]]) });
     productos[1].cantidad = 14;
     productos[6].avisar_stock = false;
+    Object.assign(productos[6], { usa_colores: true, cantidad: 11, colores: [['Capibara · Rosa', 'Capibara', 'Rosa', '#EC6478', 4], ['Capibara · Azul', 'Capibara', 'Azul', '#2F6FD0', 3], ['Princesas · Rosa', 'Princesas', 'Rosa', '#EC6478', 2], ['Carros · Azul', 'Carros', 'Azul', '#2F6FD0', 2]].map(([color, diseno, tono, hex, cantidad], i) => ({ id: 'd' + i, color, diseno, tono, hex, cantidad, orden: i })) });
     return {
       categorias: cats, productos, clientes: [{ id: 'k1', nombre: 'Doña Marta', telefono: '5555-1234' }],
       ventas: [], abonos: [], gastos: [], notificaciones: [],
@@ -54,11 +55,11 @@
   }
 
   // Suma (o resta) piezas a un producto; si tiene colores, al color indicado
-  function sumarPiezas(p, color, n, hex) {
+  function sumarPiezas(p, color, n, hex, diseno, tono) {
     if (p.usa_colores) {
       const nombre = (color || '').trim() || 'Sin especificar';
       let c = p.colores.find((k) => k.color === nombre);
-      if (!c) { if (n < 0) return; c = { id: uid(), color: nombre, hex: hex || '', cantidad: 0, orden: p.colores.length }; p.colores.push(c); }
+      if (!c) { if (n < 0) return; c = { id: uid(), color: nombre, diseno: diseno || '', tono: tono || (diseno ? '' : nombre), hex: hex || '', cantidad: 0, orden: p.colores.length }; p.colores.push(c); }
       c.cantidad = Math.max(0, c.cantidad + n);
       p.cantidad = p.colores.reduce((s, k) => s + k.cantidad, 0);
     } else p.cantidad = Math.max(0, p.cantidad + n);
@@ -116,7 +117,7 @@
       };
       const cols = p.usa_colores ? (p.colores || []).filter((c) => (c.color || '').trim()) : [];
       row.usa_colores = cols.length > 0;
-      row.colores = cols.map((c, i) => ({ id: c.id || uid(), color: c.color.trim(), hex: c.hex || '', cantidad: parseInt(c.cantidad, 10) || 0, orden: i }));
+      row.colores = cols.map((c, i) => ({ id: c.id || uid(), color: c.color.trim(), diseno: c.diseno || '', tono: c.tono || '', hex: c.hex || '', cantidad: parseInt(c.cantidad, 10) || 0, orden: i }));
       if (row.usa_colores) row.cantidad = row.colores.reduce((s, c) => s + c.cantidad, 0);
       if (p.id) Object.assign(db.productos.find((x) => x.id === p.id), row);
       else { db.seq += 1; p.id = uid(); db.productos.push({ id: p.id, codigo: 'VED-' + String(db.seq).padStart(4, '0'), etiqueta_impresa_at: null, created_at: now(), ...row }); }
@@ -124,12 +125,16 @@
     },
     async ingresoRapido(items) {
       admin(); let total = 0;
-      for (const it of items) { const p = db.productos.find((x) => x.id === it.producto_id); const n = parseInt(it.cantidad, 10) || 0; if (!p || n < 1) continue; sumarPiezas(p, it.color, n, it.hex); total += n; }
+      for (const it of items) { const p = db.productos.find((x) => x.id === it.producto_id); const n = parseInt(it.cantidad, 10) || 0; if (!p || n < 1) continue; sumarPiezas(p, it.color, n, it.hex, it.diseno, it.tono); total += n; }
       save(); return delay(total);
     },
     async archivarProductos(ids) { admin(); db.productos.forEach((p) => { if (ids.includes(p.id)) Object.assign(p, { archivado: true, activo: false, archivado_at: now() }); }); save(); },
     async restaurarProductos(ids) { admin(); db.productos.forEach((p) => { if (ids.includes(p.id)) Object.assign(p, { archivado: false, activo: true, archivado_at: null, agotado_desde: null }); }); save(); },
-    async archivarCampana(nombre) { admin(); let n = 0; db.productos.forEach((p) => { if (p.campana === nombre && !p.archivado) { Object.assign(p, { archivado: true, activo: false, archivado_at: now() }); n++; } }); save(); return n; },
+    async archivarCampana(nombre, solo) {
+      admin(); const ids = [];
+      db.productos.forEach((p) => { if (p.campana === nombre && !p.archivado && (!solo || p.cantidad === 0)) { Object.assign(p, { archivado: true, activo: false, archivado_at: now() }); ids.push(p.id); } });
+      save(); return ids;
+    },
     async borrarProductos(ids) { admin(); db.productos = db.productos.filter((p) => !ids.includes(p.id)); save(); },
     async archivarAgotadosAhora() {
       admin(); const dias = Number(db.config.dias_agotado_archivar ?? 3); let n = 0;

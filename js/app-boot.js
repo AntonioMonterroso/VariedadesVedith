@@ -132,7 +132,7 @@
         <div><h1>${esc(p.nombre)}</h1>${p.categoria ? `<span class="pill pink" style="margin-top:6px">${esc(p.categoria)}</span>` : ''}</div>
         <div class="row between wrap"><div class="price-big num">${money(p.precio)}</div>${p.disponible ? '<span class="pill ok">Disponible</span>' : '<span class="pill bad">Agotado por ahora</span>'}</div>
         ${p.descripcion ? `<p class="muted">${esc(p.descripcion)}</p>` : ''}
-        ${(p.colores || []).length ? `<div class="stack-sm"><span class="small" style="font-weight:800">Colores</span><div class="chips" style="flex-wrap:wrap;overflow:visible">${p.colores.map((c) => `<span class="chip" style="${c.disponible ? '' : 'opacity:.5;text-decoration:line-through'}">${APP.dot(c.color, c.hex)}${esc(c.color)}</span>`).join('')}</div></div>` : ''}
+        ${(p.colores || []).length ? `<div class="stack-sm"><span class="small" style="font-weight:800">${APP.textoVar(p)[0]}</span><div class="chips" style="flex-wrap:wrap;overflow:visible">${p.colores.map((c) => `<span class="chip" style="${c.disponible ? '' : 'opacity:.5;text-decoration:line-through'}">${APP.vdot(c)}${esc(c.color)}</span>`).join('')}</div></div>` : ''}
         <p class="xs faint">Código ${esc(p.codigo)}</p>
         ${waUrl ? `<a class="btn green block" target="_blank" rel="noopener" href="${waUrl}">${icon('chat')} Preguntar por WhatsApp</a>` : ''}
       </div>

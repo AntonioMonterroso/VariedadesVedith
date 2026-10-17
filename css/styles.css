@@ -843,3 +843,9 @@ input, select, textarea { font-size: max(16px, 1rem); } /* iOS hace zoom automá
   background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid var(--line); box-shadow: var(--shadow-2); }
 @media (min-width: 900px) { .lote-bar { bottom: 16px; } }
 .chip.col-chip[aria-pressed="true"] { background: var(--pink-100); color: var(--pink-700); border-color: var(--pink-600); }
+
+/* Diseños junto a los colores */
+.dis-tag { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--pink-100); color: var(--pink-700); flex: none; vertical-align: middle; }
+.dis-tag svg { width: 12px; height: 12px; }
+.ve-grupo { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.ve-cab { display: flex; align-items: center; gap: 8px; }

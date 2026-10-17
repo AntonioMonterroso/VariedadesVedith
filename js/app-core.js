@@ -49,6 +49,17 @@
     if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin conexión. Revisa tu internet e intenta otra vez.';
     return 'Algo salió mal. Intenta otra vez.' + (m ? ' (' + m.slice(0, 80) + ')' : '');
   };
+  // Confirmación "escribe la palabra" para acciones que no se deshacen fácil
+  APP.confirmarEscribiendo = ({ title, message, palabra, okLabel = 'Confirmar' }) => new Promise((resolve) => {
+    let fin = false; const done = (v) => { if (!fin) { fin = true; resolve(v); } };
+    const m = openModal({ title, onClose: () => done(false),
+      body: `<p>${esc(message)}</p><label class="field">Para confirmar, escribe <b>${esc(palabra)}</b><input class="input" id="cwIn" autocomplete="off" autocapitalize="characters" placeholder="${esc(palabra)}"></label>`,
+      footer: `<button type="button" class="btn secondary" data-no>Cancelar</button><button type="button" class="btn danger" data-ok disabled>${esc(okLabel)}</button>` });
+    const ok = m.foot.querySelector('[data-ok]'), inp = m.body.querySelector('#cwIn');
+    inp.addEventListener('input', () => { ok.disabled = inp.value.trim().toUpperCase() !== palabra.toUpperCase(); });
+    m.foot.querySelector('[data-no]').addEventListener('click', () => m.close());
+    ok.addEventListener('click', () => { done(true); m.close(); });
+  });
   APP.handleErr = (e) => {
     console.error(e);
     toast(APP.errMsg(e), { error: true, ms: 5000 });
@@ -275,7 +286,7 @@
           <div class="row wrap">${p.categoria ? `<span class="pill pink">${esc(p.categoria)}</span>` : ''}${APP.stockPill(p)}${ad && !p.activo ? '<span class="pill">Oculto</span>' : ''}</div>
         </div>
         ${p.descripcion ? `<p class="muted">${esc(p.descripcion)}</p>` : ''}
-        ${p.usa_colores && p.colores.length ? `<div class="stack-sm"><h3 style="font-size:1rem">Colores</h3><div class="list">${p.colores.map((c) => `<div class="item" style="padding:10px 14px">${APP.dot(c.color, c.hex)}<span class="grow t1">${esc(c.color)}</span>${APP.pillColor(p, c)}</div>`).join('')}</div></div>` : ''}
+        ${p.usa_colores && p.colores.length ? `<div class="stack-sm"><h3 style="font-size:1rem">${APP.textoVar(p)[0]}</h3><div class="list">${p.colores.map((c) => `<div class="item" style="padding:10px 14px">${APP.vdot(c)}<span class="grow t1">${esc(c.color)}</span>${APP.pillColor(p, c)}</div>`).join('')}</div></div>` : ''}
         ${p.precio_regateo != null ? (ad
           ? `<div class="banner info">${icon('tag')}<span class="small">Descuento (Regateo): <b class="num">${money(p.precio_regateo)}</b> — el precio más bajo al que se puede vender.</span></div>`
           : `<div class="stack-sm"><button type="button" class="btn ghost sm" id="regBtn" aria-expanded="false" style="justify-self:start">${icon('tag', 'sm')} Descuento (Regateo)</button>
@@ -309,7 +320,7 @@
     on('qr', () => APP.openQR(p));
     on('archivar', async () => {
       if (!await confirmDialog({ title: 'Archivar producto', message: `«${p.nombre}» sale de la lista, del catálogo y del QR. Las ventas ya hechas no cambian. Lo puedes restaurar desde «Archivados».`, okLabel: 'Archivar' })) return;
-      try { await API.archivarProductos([p.id]); await APP.refreshCore(); m.close(); toast('Producto archivado'); APP.render(); } catch (e) { APP.handleErr(e); }
+      try { await API.archivarProductos([p.id]); await APP.refreshCore(); m.close(); APP.render(); toast('Producto archivado', { ms: 15000, action: { label: 'Deshacer', fn: async () => { try { await API.restaurarProductos([p.id]); await APP.refreshCore(); APP.render(); toast('Producto restaurado'); } catch (er) { APP.handleErr(er); } } } }); } catch (e) { APP.handleErr(e); }
     });
     on('ingreso', () => { m.close(); APP.loteInicial = [p.id]; APP.go('ingreso'); });
   };
@@ -382,7 +393,7 @@
           <label class="field">Cantidad<input class="input" id="pfCant" type="number" inputmode="numeric" min="0" value="${esc(p.cantidad)}"></label>
         </div>
         <section class="stack-sm">
-          <label class="row"><input type="checkbox" id="pfUsaCol" ${p.usa_colores ? 'checked' : ''} ${API._colores === false ? 'disabled' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Viene en varios colores</b> <span class="small muted">Cada color lleva su propia existencia.</span></span></label>
+          <label class="row"><input type="checkbox" id="pfUsaCol" ${p.usa_colores ? 'checked' : ''} ${API._colores === false ? 'disabled' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Viene en varios colores o diseños</b> <span class="small muted">Cada opción (color, diseño o los dos juntos) lleva su propia existencia.</span></span></label>
           ${API._colores === false ? `<div class="banner">${icon('alert')}<span class="small">Para usar colores falta correr <b>migracion_colores.sql</b> en Supabase.</span></div>` : ''}
           <div id="pfColBox" ${p.usa_colores ? '' : 'hidden'}></div>
         </section>
@@ -410,8 +421,7 @@
     const colBox = m.body.querySelector('#pfColBox'), chkCol = m.body.querySelector('#pfUsaCol'), chkAv = m.body.querySelector('#pfAvisar');
     let ed = null;
     const montarEd = () => {
-      const base = (p.colores && p.colores.length) ? p.colores : (Number(p.cantidad) > 0 && !nuevo ? [{ color: '', hex: '', cantidad: p.cantidad }] : []);
-      ed = APP.editorColores(colBox, base, { onChange: (t) => { m.body.querySelector('#pfCant').value = t; } });
+      ed = APP.editorColores(colBox, p.colores || [], { piezasPrevias: (p.colores && p.colores.length) || nuevo ? 0 : Number(p.cantidad) || 0, onChange: (t) => { m.body.querySelector('#pfCant').value = t; } });
       m.body.querySelector('#pfCant').value = ed.total();
     };
     const alternarCol = () => { const on = chkCol.checked; colBox.hidden = !on; m.body.querySelector('#pfCant').disabled = on; if (on && !ed) montarEd(); };
@@ -468,7 +478,7 @@
       const usa = chkCol.checked; let colores = [];
       if (usa) {
         const r = ed.get(); if (r.error) return toast(r.error, { error: true });
-        colores = r.colores; if (!colores.length) return toast('Agrega al menos un color, o desmarca «Viene en varios colores».', { error: true });
+        colores = r.colores; if (!colores.length) return toast('Elige al menos un diseño o un color, o desmarca «Viene en varios colores o diseños».', { error: true });
       }
       if (nuevo && g('#pfCamp').value.trim()) U.lsSet('vedith-campana', g('#pfCamp').value.trim());
       const btn = m.foot.querySelector('#pfSave'); btn.disabled = true;

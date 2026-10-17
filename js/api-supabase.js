@@ -39,7 +39,7 @@
     campana: r.campana || '', archivado: !!r.archivado, archivado_at: r.archivado_at || null, conservar: !!r.conservar, agotado_desde: r.agotado_desde || null,
     colores: (r.producto_colores || r.colores || []).slice()
       .sort((a, b) => (a.orden || 0) - (b.orden || 0) || String(a.color).localeCompare(String(b.color), 'es'))
-      .map((c) => ({ id: c.id, color: c.color, hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
+      .map((c) => ({ id: c.id, color: c.color, diseno: c.diseno || '', tono: c.tono || '', hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
   });
 
   window.API = {
@@ -123,7 +123,11 @@
         const nombres = new Set(colores.map((c) => c.color.trim()));
         const sobran = actuales.filter((a) => !nombres.has(a.color)).map((a) => a.id);
         if (colores.length) {
-          ok(await sb.from('producto_colores').upsert(colores.map((c, i) => ({ producto_id: id, color: c.color.trim(), hex: /^#[0-9a-f]{6}$/i.test(c.hex || '') ? c.hex : null, cantidad: parseInt(c.cantidad, 10) || 0, orden: i })), { onConflict: 'producto_id,color' }));
+          const filas = colores.map((c, i) => ({ producto_id: id, color: c.color.trim(), hex: /^#[0-9a-f]{6}$/i.test(c.hex || '') ? c.hex : null, cantidad: parseInt(c.cantidad, 10) || 0, orden: i, diseno: c.diseno || null, tono: c.tono || null }));
+          const quitar = ({ diseno, tono, ...resto }) => resto;   // si aún no se corrió migracion_disenos.sql
+          let r = await sb.from('producto_colores').upsert(this._variantes === false ? filas.map(quitar) : filas, { onConflict: 'producto_id,color' });
+          if (r.error && this._variantes !== false && /diseno|tono|column/i.test(r.error.message || '')) { this._variantes = false; r = await sb.from('producto_colores').upsert(filas.map(quitar), { onConflict: 'producto_id,color' }); }
+          ok(r);
         }
         if (sobran.length) ok(await sb.from('producto_colores').delete().in('id', sobran));
       }
@@ -132,7 +136,12 @@
     /* ---- archivado y limpieza (productos que van por tandadas) ---- */
     async archivarProductos(ids) { if (ids.length) ok(await sb.from('productos').update({ archivado: true, activo: false, archivado_at: new Date().toISOString() }).in('id', ids)); },
     async restaurarProductos(ids) { if (ids.length) ok(await sb.from('productos').update({ archivado: false, activo: true, archivado_at: null, agotado_desde: null }).in('id', ids)); },
-    async archivarCampana(nombre) { return ok(await sb.from('productos').update({ archivado: true, activo: false, archivado_at: new Date().toISOString() }).eq('campana', nombre).eq('archivado', false).select('id')).length; },
+    // solo = true: únicamente lo ya agotado. Devuelve los ids archivados (para poder deshacer)
+    async archivarCampana(nombre, solo) {
+      let q = sb.from('productos').update({ archivado: true, activo: false, archivado_at: new Date().toISOString() }).eq('campana', nombre).eq('archivado', false);
+      if (solo) q = q.eq('cantidad', 0);
+      return ok(await q.select('id')).map((r) => r.id);
+    },
     async borrarProductos(ids) { if (ids.length) ok(await sb.from('productos').delete().in('id', ids)); },
     async archivarAgotadosAhora() { return ok(await sb.rpc('fn_archivar_agotados', {})); },
     async depurarAhora() { return ok(await sb.rpc('fn_depurar', {})); },

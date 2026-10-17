@@ -124,13 +124,29 @@
         ${enCamp.length ? `<button type="button" class="btn secondary sm" data-archcamp>${icon('box', 'sm')} Archivar esta campaña (${enCamp.length} productos · ${enCamp.reduce((s, p) => s + p.cantidad, 0)} piezas)</button>` : ''}
         ${agot.length ? `<button type="button" class="btn ghost sm" data-agot>Archivar ${agot.length} ${agot.length === 1 ? 'agotado' : 'agotados'} ahora</button>` : ''}</div>`;
       box.querySelectorAll('[data-camp]').forEach((b) => b.addEventListener('click', () => { F.camp = b.dataset.camp; paint(); }));
+      const deshacer = (ids, msg) => toast(msg, { ms: 15000, action: { label: 'Deshacer', fn: async () => { try { await API.restaurarProductos(ids); await APP.refreshCore(); toast('Productos restaurados'); paint(); } catch (e) { APP.handleErr(e); } } } });
       const ac = bar.querySelector('[data-archcamp]');
-      if (ac) ac.addEventListener('click', async () => {
-        if (!await confirmDialog({ title: 'Archivar campaña', message: `Se archivan los ${enCamp.length} productos de «${F.camp}» (${enCamp.reduce((s, p) => s + p.cantidad, 0)} piezas sin vender). Salen de la lista, del catálogo y del QR; las ventas ya hechas no cambian. Se borran del todo a los ${diasBorrar()} días, y mientras tanto los puedes restaurar.`, okLabel: 'Archivar campaña', danger: true })) return;
-        try { const k = await API.archivarCampana(F.camp); F.camp = ''; await APP.refreshCore(); toast(`${k} productos archivados`); paint(); } catch (e) { APP.handleErr(e); }
+      if (ac) ac.addEventListener('click', () => {
+        const sinP = enCamp.filter((p) => p.cantidad === 0), conP = enCamp.filter((p) => p.cantidad > 0), piezas = conP.reduce((s, p) => s + p.cantidad, 0);
+        const m = openModal({ title: 'Archivar campaña', body: `<p>«${esc(F.camp)}» tiene <b>${enCamp.length}</b> productos:</p>
+          <div class="list"><div class="item"><span class="grow"><div class="t1">${sinP.length} ya agotados</div><div class="t2">Sin piezas: es lo más seguro de archivar.</div></span></div>
+            <div class="item"><span class="grow"><div class="t1">${conP.length} con piezas todavía</div><div class="t2">${piezas} piezas sin vender</div></span></div></div>
+          <p class="small muted">Lo archivado sale de la lista, del catálogo y del QR. Lo puedes <b>restaurar</b> durante ${diasBorrar()} días, y ahora mismo puedes tocar «Deshacer». Las ventas ya hechas no cambian.</p>`,
+          footer: `<button type="button" class="btn secondary" data-no>Cancelar</button>${sinP.length ? `<button type="button" class="btn" data-solo>Archivar solo los agotados (${sinP.length})</button>` : ''}${conP.length ? '<button type="button" class="btn ghost" style="color:var(--red-600)" data-todo>Archivar todo…</button>' : ''}` });
+        const correr = async (solo) => {
+          try {
+            const ids = await API.archivarCampana(F.camp, solo); await APP.refreshCore();
+            if (!APP.productos.some((p) => p.campana === F.camp)) F.camp = '';
+            paint(); deshacer(ids, `${ids.length} productos archivados`);
+          } catch (e) { APP.handleErr(e); }
+        };
+        m.foot.querySelector('[data-no]').addEventListener('click', () => m.close());
+        const so = m.foot.querySelector('[data-solo]'); if (so) so.addEventListener('click', () => { m.close(); correr(true); });
+        const to = m.foot.querySelector('[data-todo]');
+        if (to) to.addEventListener('click', async () => { m.close(); if (await APP.confirmarEscribiendo({ title: 'Archivar todo', message: `Se archivan también los ${conP.length} productos que todavía tienen ${piezas} piezas por vender. Dejan de poder venderse hasta que los restaures.`, palabra: 'ARCHIVAR', okLabel: 'Archivar todo' })) correr(false); });
       });
       const ag = bar.querySelector('[data-agot]');
-      if (ag) ag.addEventListener('click', async () => { try { await API.archivarProductos(agot.map((p) => p.id)); await APP.refreshCore(); toast(`${agot.length} productos archivados`); paint(); } catch (e) { APP.handleErr(e); } });
+      if (ag) ag.addEventListener('click', async () => { const ids = agot.map((p) => p.id); try { await API.archivarProductos(ids); await APP.refreshCore(); paint(); deshacer(ids, `${ids.length} productos archivados`); } catch (e) { APP.handleErr(e); } });
     };
     const pintarArchivados = () => {
       const grid = main.querySelector('#pGrid'); main.querySelector('#pCount').textContent = `${APP.archivados.length} archivados`;
@@ -142,7 +158,7 @@
         }).join('')}</div></div>`;
       grid.querySelectorAll('[data-rest]').forEach((b) => b.addEventListener('click', async () => { try { await API.restaurarProductos([b.dataset.rest]); await APP.refreshCore(); toast('Producto restaurado'); if (!APP.archivados.length) F.camp = ''; paint(); } catch (e) { APP.handleErr(e); } }));
       grid.querySelectorAll('[data-borrar]').forEach((b) => b.addEventListener('click', async () => {
-        if (!await confirmDialog({ title: 'Borrar para siempre', message: 'Se borra de la base de datos y ya no se puede recuperar. Las ventas ya hechas no cambian.', okLabel: 'Borrar', danger: true })) return;
+        if (!await APP.confirmarEscribiendo({ title: 'Borrar para siempre', message: 'Se borra de la base de datos y ya no se puede recuperar. Las ventas ya hechas no cambian.', palabra: 'BORRAR', okLabel: 'Borrar' })) return;
         try { await API.borrarProductos([b.dataset.borrar]); await APP.refreshCore(); if (!APP.archivados.length) F.camp = ''; paint(); } catch (e) { APP.handleErr(e); }
       }));
     };
@@ -225,7 +241,7 @@
           <section class="stack-sm" aria-label="Productos en la venta">
             ${lines.length ? lines.map((l) => `
               <div class="cart-line" data-k="${esc(l.id + '|' + (l.color || ''))}">
-                <div class="grow"><div class="t1">${esc(l.p.nombre)}${l.color ? ` <span style="display:inline-flex;gap:6px;align-items:center;vertical-align:middle">${APP.dot(l.color, ((l.p.colores || []).find((c) => c.color === l.color) || {}).hex)}<span class="small">${esc(l.color)}</span></span>` : ''}</div><div class="small muted">${esc(l.p.codigo)}${l.p.avisar_stock === false ? '' : ' · quedan ' + APP.maxVenta(l.p, l.color)}</div></div>
+                <div class="grow"><div class="t1">${esc(l.p.nombre)}${l.color ? ` <span style="display:inline-flex;gap:6px;align-items:center;vertical-align:middle">${APP.vdot((l.p.colores || []).find((c) => c.color === l.color) || { color: l.color })}<span class="small">${esc(l.color)}</span></span>` : ''}</div><div class="small muted">${esc(l.p.codigo)}${l.p.avisar_stock === false ? '' : ' · quedan ' + APP.maxVenta(l.p, l.color)}</div></div>
                 <button type="button" class="icon-btn" data-del aria-label="Quitar ${esc(l.p.nombre)}">${icon('x')}</button>
                 <div class="stepper" role="group" aria-label="Cantidad">
                   <button type="button" data-minus aria-label="Menos">${icon('minus')}</button>

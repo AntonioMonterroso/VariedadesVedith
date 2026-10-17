@@ -397,6 +397,7 @@
           <div class="row"><input class="input grow" id="aCatNew" placeholder="Nueva categoría" maxlength="40"><button type="button" class="btn secondary" id="aCatAdd">Agregar</button></div>
         </section>
 
+        <section class="card stack" id="aPresets"></section>
         <section class="card stack"><h2>Orden y limpieza</h2>
           <p class="small muted">Los productos van por tandadas: cuando uno se agota y pasan unos días, se archiva solo (sale de la lista, del catálogo y del QR). Lo archivado se borra de la base pasado otro plazo. Las ventas y los reportes no se tocan.</p>
           <div class="grid-2"><label class="field">Archivar agotados después de (días)<input class="input" id="aDiasA" type="number" inputmode="numeric" min="1" max="60" value="${esc(c.dias_agotado_archivar || 3)}"></label>
@@ -437,6 +438,7 @@
       try { await API.addCategoria(v); g('#aCatNew').value = ''; await APP.refreshCore(); pintarCats(); } catch (e) { APP.handleErr(/duplicate|unique/i.test(e.message) ? new Error('Esa categoría ya existe.') : e); }
     });
     g('#aExcel').addEventListener('click', APP.exportarExcel);
+    APP.panelPresets(g('#aPresets'));
     const sinSql = (e) => /PGRST202|Could not find the function|fn_archivar|fn_depurar/i.test((e.code || '') + ' ' + (e.message || ''));
     const aviso = (e) => (sinSql(e) ? toast('Falta correr migracion_campanas.sql en Supabase.', { error: true, ms: 5000 }) : APP.handleErr(e));
     g('#aLimGuardar').addEventListener('click', async () => {
@@ -449,7 +451,7 @@
       try { const n = await API.archivarAgotadosAhora(); await APP.refreshCore(); toast(n ? `${n} productos archivados` : 'No había nada que archivar todavía'); } catch (e) { aviso(e); }
     });
     g('#aDepurar').addEventListener('click', async () => {
-      if (!await confirmDialog({ title: 'Limpiar la base', message: 'Se borran para siempre los productos archivados que ya pasaron su plazo, y los avisos, escaneos y registros viejos. Las ventas y reportes no cambian.', okLabel: 'Limpiar', danger: true })) return;
+      if (!await APP.confirmarEscribiendo({ palabra: 'LIMPIAR', title: 'Limpiar la base', message: 'Se borran para siempre los productos archivados que ya pasaron su plazo, y los avisos, escaneos y registros viejos. Las ventas y reportes no cambian.', okLabel: 'Limpiar', danger: true })) return;
       try { const r = await API.depurarAhora(); await APP.refreshCore(); toast(`Listo: ${r.productos} productos, ${r.avisos} avisos y ${r.escaneos} escaneos borrados`, { ms: 5000 }); } catch (e) { aviso(e); }
     });
     g('#aAyuda').addEventListener('click', APP.openHelp);
