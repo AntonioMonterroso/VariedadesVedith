@@ -82,6 +82,15 @@ Es solo para la administradora: no sale en el catálogo, en las fichas del QR, e
 3. En un producto: **Avisarme cuando se acabe**. Si lo apagas, no sale la alerta de poco stock ni cuenta en «Poco o sin stock», y se puede vender aunque ya no haya (la existencia nunca baja de 0). Sirve para lo que haces bajo pedido.
 4. **Más → Ingreso rápido**: buscas o escaneas los productos, pones cuántas llegaron (por color si tiene) y se suma todo de una vez. También crea productos nuevos al vuelo con «Producto rápido».
 
+## 11. Campañas, archivado automático y limpieza de la base
+Los productos van por tandadas y casi no se repiten, así que el panel se mantiene limpio solo.
+1. En el SQL Editor pega **todo** `migracion_campanas.sql` y dale **Run**. Crea el campo campaña, el archivado y dos tareas diarias de Supabase.
+2. **Campaña**: cada producto lleva el nombre de su tanda (al importar del catálogo se pone solo). En **Productos** se filtra por campaña y, al terminar, **Archivar esta campaña** guarda todo junto.
+3. **Archivado automático**: cuando un producto se agota y pasan **3 días** (se cambia en Ajustes → Orden y limpieza), se archiva solo: sale de la lista, del catálogo y del QR. Los marcados **Mantener siempre** no se archivan.
+4. **Archivados**: en Productos, chip «Archivados». Se pueden **restaurar** o borrar para siempre.
+5. **Limpieza de la base**: lo archivado se **borra de verdad a los 30 días**, junto con avisos leídos de más de 60 días, escaneos de QR de más de 90 y registros de más de 180. Las ventas, ganancias y reportes **no se tocan** (cada venta guarda su propia copia). Corre cada día a las 3:45 am; también hay botones «Archivar agotados ahora» y «Limpiar la base ahora».
+6. Los productos **nuevos nacen sin aviso de poco stock**; se enciende por producto si alguno sí se vuelve a pedir.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

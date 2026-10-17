@@ -129,7 +129,7 @@
       if (usa) { const r = ed.get(); if (r.error) return toast(r.error, { error: true }); colores = r.colores; if (!colores.length) return toast('Agrega al menos un color.', { error: true }); }
       const btn = m.foot.querySelector('[data-ok]'); btn.disabled = true;
       try {
-        const id = await API.saveProducto({ nombre, precio, costo: g('#prCosto').value || 0, cantidad: usa ? 0 : g('#prCant').value, stock_minimo: 2, activo: true, fotos: [], usa_colores: usa, colores, avisar_stock: true });
+        const id = await API.saveProducto({ nombre, precio, costo: g('#prCosto').value || 0, cantidad: usa ? 0 : g('#prCant').value, stock_minimo: 2, activo: true, fotos: [], usa_colores: usa, colores, avisar_stock: false, campana: U.lsGet('vedith-campana', '') });
         await APP.refreshCore(); m.close(); toast(`«${nombre}» creado`);
         if (opts.onCreated) opts.onCreated(id); else APP.render();
       } catch (e) { btn.disabled = false; APP.handleErr(e); }

@@ -162,7 +162,7 @@
       if (!await confirmDialog({ title: 'Importar productos', message: `Se crearán ${nuevos.length} productos como borradores (ocultos, sin precio de venta ni foto).${items.length > nuevos.length ? ` Se omiten ${items.length - nuevos.length} que ya existen.` : ''}`, okLabel: 'Importar' })) return;
       const btn = g('#impImportar'); btn.disabled = true; btn.textContent = 'Importando…';
       try {
-        await API.importarProductos(catalogo.id, nuevos);
+        await API.importarProductos(catalogo.id, nuevos, catalogo.titulo);
         items = []; guardar(); await APP.refreshCore(); cerrar();
         toast(`${nuevos.length} productos importados. Falta ponerles precio y foto.`, { ms: 7000, action: { label: 'Completar ahora', fn: () => APP.go('pendientes') } });
         APP.render();

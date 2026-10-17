@@ -14,6 +14,7 @@ Panel para vender, controlar el inventario y pedir cajas de Tupperware. Sitio es
 - **Importador de productos**: marcas con un recuadro cada producto en las páginas del catálogo y se lee su código, nombre y precio (OCR dentro del navegador, sin costo). Los productos entran como borradores y se completan en «Pendientes» con tu precio y el enlace de su foto.
 - **Dulces (privado)**: control personal de gelatinas y gomitas: entregas, pagos, cuadre contra lo que debían pagar, gastos y cuánto sobra, con comprobante en imagen. Solo la administración lo ve.
 - **Colores y stock por color**: cada producto puede tener varios colores con su propia existencia, y un interruptor para no avisar cuando se acabe (y poder vender sin límite). **Ingreso rápido** para sumar piezas de varios productos y colores de una vez.
+- **Campañas y limpieza automática**: cada producto pertenece a una campaña; se archiva una campaña completa de un toque, los agotados se archivan solos a los 3 días y lo archivado se borra de la base a los 30 (plazos ajustables). Los productos nuevos nacen sin aviso de poco stock.
 - **App instalable** con atajos (buscar, vender, escanear, etiquetas), escáner de QR con la cámara y respaldo en Excel.
 
 ## Archivos

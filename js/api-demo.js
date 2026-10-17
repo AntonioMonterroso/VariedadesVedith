@@ -3,7 +3,7 @@
    Sirve para enseñar el panel sin tocar la base real. */
 (function () {
   'use strict';
-  const KEY = 'vedith-demo-v5';
+  const KEY = 'vedith-demo-v6';
   const PIN = { administrador: '111111', visualizador: '222222' };
   const ymdHoy = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
@@ -40,6 +40,7 @@
       P(11, 6, 'Organizador de refri', 'Apilable, con asa. Para verduras y frutas.', 98, 60, 10, 3, 'O11', svg('#FCE3E8', '#EC6478', box)),
       P(12, 2, 'Botella Aqua 1 L', 'Botella deportiva con boquilla.', 105, 66, 12, 4, 'B21', svg('#FBEBD0', '#E3942B', bottle))
     ];
+    productos.forEach((p, i) => { p.campana = i < 8 ? 'Tupper Tips 11 · oct 2026' : 'Tupper Tips 10 · sep 2026'; p.archivado = false; p.conservar = false; });
     Object.assign(productos[1], { usa_colores: true, colores: colores([['Rojo', '#D8473F', 5], ['Azul', '#2F6FD0', 6], ['Verde', '#2E9A5B', 3]]) });
     productos[1].cantidad = 14;
     productos[6].avisar_stock = false;
@@ -111,7 +112,7 @@
         precio_regateo: p.precio_regateo === '' || p.precio_regateo == null ? null : Number(p.precio_regateo),
         ...(p.precio_catalogo !== undefined ? { precio_catalogo: p.precio_catalogo === '' || p.precio_catalogo == null ? null : Number(p.precio_catalogo) } : {}),
         codigo_tupperware: (p.codigo_tupperware || '').trim(), fotos: (p.fotos || []).filter(Boolean).slice(0, 5),
-        avisar_stock: p.avisar_stock !== false
+        avisar_stock: p.avisar_stock !== false, campana: (p.campana || '').trim(), conservar: !!p.conservar
       };
       const cols = p.usa_colores ? (p.colores || []).filter((c) => (c.color || '').trim()) : [];
       row.usa_colores = cols.length > 0;
@@ -125,6 +126,20 @@
       admin(); let total = 0;
       for (const it of items) { const p = db.productos.find((x) => x.id === it.producto_id); const n = parseInt(it.cantidad, 10) || 0; if (!p || n < 1) continue; sumarPiezas(p, it.color, n, it.hex); total += n; }
       save(); return delay(total);
+    },
+    async archivarProductos(ids) { admin(); db.productos.forEach((p) => { if (ids.includes(p.id)) Object.assign(p, { archivado: true, activo: false, archivado_at: now() }); }); save(); },
+    async restaurarProductos(ids) { admin(); db.productos.forEach((p) => { if (ids.includes(p.id)) Object.assign(p, { archivado: false, activo: true, archivado_at: null, agotado_desde: null }); }); save(); },
+    async archivarCampana(nombre) { admin(); let n = 0; db.productos.forEach((p) => { if (p.campana === nombre && !p.archivado) { Object.assign(p, { archivado: true, activo: false, archivado_at: now() }); n++; } }); save(); return n; },
+    async borrarProductos(ids) { admin(); db.productos = db.productos.filter((p) => !ids.includes(p.id)); save(); },
+    async archivarAgotadosAhora() {
+      admin(); const dias = Number(db.config.dias_agotado_archivar ?? 3); let n = 0;
+      db.productos.forEach((p) => { if (!p.archivado && !p.conservar && p.cantidad === 0 && p.agotado_desde && Date.now() - new Date(p.agotado_desde) >= dias * 86400000) { Object.assign(p, { archivado: true, activo: false, archivado_at: now() }); n++; } });
+      save(); return n;
+    },
+    async depurarAhora() {
+      admin(); const dias = Number(db.config.dias_borrar_archivados ?? 30), antes = db.productos.length;
+      db.productos = db.productos.filter((p) => !(p.archivado && Date.now() - new Date(p.archivado_at) >= dias * 86400000));
+      save(); return { productos: antes - db.productos.length, avisos: 0, escaneos: 0, bitacora: 0 };
     },
     async deleteProducto(id) { admin(); db.productos = db.productos.filter((p) => p.id !== id); save(); },
     async setEtiquetaImpresa(ids, impresa) { admin(); db.productos.forEach((p) => { if (ids.includes(p.id)) p.etiqueta_impresa_at = impresa ? now() : null; }); save(); },
@@ -162,6 +177,7 @@
       }
       if (col) { col.cantidad = Math.max(0, col.cantidad - l.cantidad); p.cantidad = p.colores.reduce((s, c) => s + c.cantidad, 0); }
       else p.cantidad = Math.max(0, p.cantidad - l.cantidad);
+      p.agotado_desde = p.cantidad === 0 ? (p.agotado_desde || now()) : null;
       const etiqueta = p.nombre + (col ? ` (${col.color})` : '');
       const v = {
         id: uid(), producto_id: p.id, producto_codigo: p.codigo, producto_nombre: etiqueta, color: col ? col.color : null, cantidad: l.cantidad,
@@ -282,10 +298,10 @@
       return c ? { catalogo: c, paginas: CAT.pags[c.id] || [], config: db.config } : { catalogo: null, paginas: [], config: {} };
     },
     async zonasProductos() { admin(); return CAT.zonas; },
-    async importarProductos(catalogoId, items) {
+    async importarProductos(catalogoId, items, campana) {
       admin(); const creados = [];
       for (const it of items) {
-        const id = await this.saveProducto({ nombre: it.nombre, descripcion: it.descripcion || '', codigo_tupperware: it.codigo || '', precio: 0, costo: 0, cantidad: 0, stock_minimo: 2, activo: false, fotos: [], precio_catalogo: it.precio_catalogo });
+        const id = await this.saveProducto({ nombre: it.nombre, descripcion: it.descripcion || '', codigo_tupperware: it.codigo || '', precio: 0, costo: 0, cantidad: 0, stock_minimo: 2, activo: false, fotos: [], precio_catalogo: it.precio_catalogo, avisar_stock: false, campana: campana || '' });
         CAT.zonas.push({ id: uid(), catalogo_id: catalogoId, producto_id: id, pagina: it.pagina, x: it.x, y: it.y, w: it.w, h: it.h });
         creados.push(id);
       }

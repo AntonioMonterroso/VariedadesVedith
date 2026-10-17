@@ -101,6 +101,7 @@
           <button type="button" class="chip" data-cat="" aria-pressed="${!F.cat}">Todo</button>
           ${cats.map((c) => `<button type="button" class="chip" data-cat="${esc(c.id)}" aria-pressed="${F.cat === c.id}">${esc(c.nombre)}</button>`).join('')}
         </div>
+        ${ad ? '<div class="chips" id="pCamp" role="group" aria-label="Campañas"></div><div id="pCampBar"></div>' : ''}
         ${ad ? `<div class="chips" id="pFil" role="group" aria-label="Filtros">
           <button type="button" class="chip" data-f="stock" aria-pressed="${F.f === 'stock'}">${icon('alert', 'sm')} Poco stock</button>
           <button type="button" class="chip" data-f="etiq" aria-pressed="${F.f === 'etiq'}">${icon('qr', 'sm')} Sin etiqueta</button>
@@ -109,8 +110,46 @@
       </div>
       <div id="pGrid" class="grid-productos"></div>`;
 
+    const diasBorrar = () => Number(APP.config.dias_borrar_archivados) || 30;
+    const pintarCamp = () => {
+      const box = main.querySelector('#pCamp'), bar = main.querySelector('#pCampBar'); if (!box) return;
+      const cs = {}; APP.productos.forEach((p) => { if (p.campana) cs[p.campana] = (cs[p.campana] || 0) + 1; });
+      const n = APP.archivados.length;
+      box.innerHTML = (Object.keys(cs).length || n) ? `<button type="button" class="chip" data-camp="" aria-pressed="${!F.camp}">Todas las campañas</button>`
+        + Object.entries(cs).map(([c, k]) => `<button type="button" class="chip" data-camp="${esc(c)}" aria-pressed="${F.camp === c}">${esc(c)} · ${k}</button>`).join('')
+        + (n ? `<button type="button" class="chip" data-camp="__arch" aria-pressed="${F.camp === '__arch'}">${icon('box', 'sm')} Archivados · ${n}</button>` : '') : '';
+      const agot = APP.productos.filter((p) => p.activo && p.cantidad === 0 && p.agotado_desde && !p.conservar);
+      const enCamp = F.camp && F.camp !== '__arch' ? APP.productos.filter((p) => p.campana === F.camp) : [];
+      bar.innerHTML = `<div class="row wrap" style="margin-top:6px">
+        ${enCamp.length ? `<button type="button" class="btn secondary sm" data-archcamp>${icon('box', 'sm')} Archivar esta campaña (${enCamp.length} productos · ${enCamp.reduce((s, p) => s + p.cantidad, 0)} piezas)</button>` : ''}
+        ${agot.length ? `<button type="button" class="btn ghost sm" data-agot>Archivar ${agot.length} ${agot.length === 1 ? 'agotado' : 'agotados'} ahora</button>` : ''}</div>`;
+      box.querySelectorAll('[data-camp]').forEach((b) => b.addEventListener('click', () => { F.camp = b.dataset.camp; paint(); }));
+      const ac = bar.querySelector('[data-archcamp]');
+      if (ac) ac.addEventListener('click', async () => {
+        if (!await confirmDialog({ title: 'Archivar campaña', message: `Se archivan los ${enCamp.length} productos de «${F.camp}» (${enCamp.reduce((s, p) => s + p.cantidad, 0)} piezas sin vender). Salen de la lista, del catálogo y del QR; las ventas ya hechas no cambian. Se borran del todo a los ${diasBorrar()} días, y mientras tanto los puedes restaurar.`, okLabel: 'Archivar campaña', danger: true })) return;
+        try { const k = await API.archivarCampana(F.camp); F.camp = ''; await APP.refreshCore(); toast(`${k} productos archivados`); paint(); } catch (e) { APP.handleErr(e); }
+      });
+      const ag = bar.querySelector('[data-agot]');
+      if (ag) ag.addEventListener('click', async () => { try { await API.archivarProductos(agot.map((p) => p.id)); await APP.refreshCore(); toast(`${agot.length} productos archivados`); paint(); } catch (e) { APP.handleErr(e); } });
+    };
+    const pintarArchivados = () => {
+      const grid = main.querySelector('#pGrid'); main.querySelector('#pCount').textContent = `${APP.archivados.length} archivados`;
+      grid.innerHTML = `<div style="grid-column:1/-1" class="stack-sm"><div class="banner info">${icon('info')}<span class="small">Aquí están los productos archivados. Se borran solos pasados <b>${diasBorrar()} días</b>; antes de eso los puedes restaurar. Las ventas ya hechas no cambian.</span></div>
+        <div class="list">${APP.archivados.map((p) => {
+          const rest = Math.max(0, diasBorrar() - Math.floor((Date.now() - new Date(p.archivado_at || Date.now())) / 86400000));
+          return `<div class="item"><span class="grow"><div class="t1">${esc(p.nombre)}</div><div class="t2">${esc(p.codigo)}${p.campana ? ' · ' + esc(p.campana) : ''} · se borra en ${rest} ${rest === 1 ? 'día' : 'días'}</div></span>
+            <button type="button" class="btn secondary sm" data-rest="${esc(p.id)}">Restaurar</button><button type="button" class="icon-btn" data-borrar="${esc(p.id)}" aria-label="Borrar para siempre">${icon('trash')}</button></div>`;
+        }).join('')}</div></div>`;
+      grid.querySelectorAll('[data-rest]').forEach((b) => b.addEventListener('click', async () => { try { await API.restaurarProductos([b.dataset.rest]); await APP.refreshCore(); toast('Producto restaurado'); if (!APP.archivados.length) F.camp = ''; paint(); } catch (e) { APP.handleErr(e); } }));
+      grid.querySelectorAll('[data-borrar]').forEach((b) => b.addEventListener('click', async () => {
+        if (!await confirmDialog({ title: 'Borrar para siempre', message: 'Se borra de la base de datos y ya no se puede recuperar. Las ventas ya hechas no cambian.', okLabel: 'Borrar', danger: true })) return;
+        try { await API.borrarProductos([b.dataset.borrar]); await APP.refreshCore(); if (!APP.archivados.length) F.camp = ''; paint(); } catch (e) { APP.handleErr(e); }
+      }));
+    };
     const paint = () => {
+      if (ad) { pintarCamp(); if (F.camp === '__arch') return pintarArchivados(); }
       let list = APP.productos.filter((p) => APP.matchProducto(p, F.q));
+      if (F.camp) list = list.filter((p) => p.campana === F.camp);
       if (F.cat) list = list.filter((p) => p.categoria_id === F.cat);
       if (F.f === 'stock') list = list.filter((p) => p.activo && APP.stockEstado(p) !== 'ok');
       else if (F.f === 'etiq') list = list.filter((p) => p.activo && !p.etiqueta_impresa_at);

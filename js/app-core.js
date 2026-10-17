@@ -9,6 +9,7 @@
     user: null,
     productos: [],
     categorias: [],
+    archivados: [],
     cuentas: [],
     notifs: [],
     config: {},
@@ -59,7 +60,7 @@
     const jobs = [API.categorias(), API.productos(), API.config(), API.cuentas()];
     if (isAdmin()) jobs.push(API.notificaciones());
     const [cats, prods, cfg, cuentas, notifs] = await Promise.all(jobs);
-    APP.categorias = cats; APP.productos = prods; APP.config = cfg; APP.cuentas = cuentas; APP.notifs = notifs || [];
+    APP.productosTodos = prods; APP.productos = prods.filter((p) => !p.archivado); APP.archivados = prods.filter((p) => p.archivado); APP.categorias = cats; APP.config = cfg; APP.cuentas = cuentas; APP.notifs = notifs || [];
     APP.paintBadges();
   };
   APP.cuentaNombre = (id) => (APP.cuentas.find((c) => c.id === id) || {}).nombre || '';
@@ -285,12 +286,14 @@
           ${ad ? `<dt>Código Tupperware</dt><dd>${p.codigo_tupperware ? esc(p.codigo_tupperware) : '<span class="faint">sin anotar</span>'}</dd>
           <dt>Costo</dt><dd class="num">${money(p.costo)}</dd>
           <dt>Ganancia por pieza</dt><dd class="num">${money(gan)}</dd>
+          <dt>Campaña</dt><dd>${p.campana ? esc(p.campana) : '<span class="faint">sin campaña</span>'}</dd>
           <dt>Aviso de poco stock</dt><dd>${p.avisar_stock === false ? 'Apagado' : 'Con ' + p.stock_minimo + ' o menos'}</dd>
           <dt>Etiqueta QR</dt><dd>${p.etiqueta_impresa_at ? `Impresa · ${U.fmtDate(p.etiqueta_impresa_at)}` : '<span class="pill warn">Sin imprimir</span>'}</dd>` : ''}
         </dl>
         <div class="row wrap">
           ${ad ? `<button type="button" class="btn secondary sm" data-a="ingreso">${icon('plus', 'sm')} Ingreso de mercadería</button>
-          <button type="button" class="btn secondary sm" data-a="qr">${icon('qr', 'sm')} Ver QR</button>` : ''}
+          <button type="button" class="btn secondary sm" data-a="qr">${icon('qr', 'sm')} Ver QR</button>
+          <button type="button" class="btn secondary sm" data-a="archivar">${icon('box', 'sm')} Archivar</button>` : ''}
         </div>`,
       footer: `${ad ? `<button type="button" class="btn secondary" data-a="editar">${icon('edit')} Editar</button>` : ''}
                <button type="button" class="btn" data-a="vender" ${APP.sinStock(p) ? 'disabled' : ''}>${icon('bag')} Vender</button>`
@@ -304,6 +307,10 @@
     if (rb) rb.addEventListener('click', () => { const box = m.body.querySelector('#regBox'); box.hidden = !box.hidden; rb.setAttribute('aria-expanded', String(!box.hidden)); });
     on('editar', () => { m.close(); APP.openProductoForm(p); });
     on('qr', () => APP.openQR(p));
+    on('archivar', async () => {
+      if (!await confirmDialog({ title: 'Archivar producto', message: `«${p.nombre}» sale de la lista, del catálogo y del QR. Las ventas ya hechas no cambian. Lo puedes restaurar desde «Archivados».`, okLabel: 'Archivar' })) return;
+      try { await API.archivarProductos([p.id]); await APP.refreshCore(); m.close(); toast('Producto archivado'); APP.render(); } catch (e) { APP.handleErr(e); }
+    });
     on('ingreso', () => { m.close(); APP.loteInicial = [p.id]; APP.go('ingreso'); });
   };
 
@@ -353,7 +360,7 @@
   /* ---------- formulario de producto (admin) ---------- */
   APP.openProductoForm = function (p, opts = {}) {
     const nuevo = !p;
-    p = p || { nombre: '', categoria_id: '', descripcion: '', precio: '', costo: '', precio_regateo: '', cantidad: 1, stock_minimo: 2, codigo_tupperware: '', activo: true, fotos: [], usa_colores: false, avisar_stock: true, colores: [], ...(opts.prefill || {}) };
+    p = p || { nombre: '', categoria_id: '', descripcion: '', precio: '', costo: '', precio_regateo: '', cantidad: 1, stock_minimo: 2, codigo_tupperware: '', activo: true, fotos: [], usa_colores: false, avisar_stock: false, colores: [], campana: U.lsGet('vedith-campana', ''), conservar: false, ...(opts.prefill || {}) };
     const catOpts = APP.categorias.map((c) => `<option value="${esc(c.id)}" ${c.id === p.categoria_id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('');
     const slots = Math.min(5, Math.max(1, (p.fotos || []).length + (nuevo || (p.fotos || []).length < 5 ? 1 : 0)));
     const m = openModal({
@@ -366,6 +373,9 @@
           <label class="field">Código Tupperware <span class="hint">Para volver a pedirlo. Solo lo ves tú; nunca sale en la ficha ni en el QR.</span>
             <input class="input" id="pfTup" value="${esc(p.codigo_tupperware || '')}" maxlength="40" placeholder="Ej.: 4581"></label>
         </div>
+        <label class="field">Campaña <span class="hint">La tanda a la que pertenece (ej.: Tupper Tips 11). Sirve para filtrar y archivar todo junto cuando termine.</span>
+          <input class="input" id="pfCamp" list="pfCampList" value="${esc(p.campana || '')}" maxlength="60" placeholder="Ej.: Tupper Tips 11 · oct 2026" autocomplete="off"></label>
+        <datalist id="pfCampList">${[...new Set(APP.productosTodos.map((x) => x.campana).filter(Boolean))].map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         <div class="grid-3">
           <label class="field">Precio de venta *<input class="input" id="pfPrecio" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(p.precio)}" placeholder="0.00"></label>
           <label class="field">Costo<input class="input" id="pfCosto" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(p.costo)}" placeholder="0.00"></label>
@@ -390,6 +400,7 @@
           <button type="button" class="btn secondary sm" id="pfAddFoto">${icon('plus', 'sm')} Otra foto</button>
         </fieldset>
         <label class="row"><input type="checkbox" id="pfActivo" ${p.activo !== false ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Visible en el catálogo</b> <span class="small muted">(si lo desmarcas, solo tú lo ves)</span></span></label>
+        <label class="row"><input type="checkbox" id="pfConservar" ${p.conservar ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Mantener siempre</b> <span class="small muted">No se archiva solo aunque se agote.</span></span></label>
       </form>`,
       footer: `${!nuevo ? `<button type="button" class="btn secondary" style="flex:0 0 auto" id="pfDel" aria-label="Eliminar producto">${icon('trash')}</button>` : ''}
         <button type="button" class="btn secondary" data-no>Cancelar</button><button type="button" class="btn" id="pfSave">Guardar</button>`
@@ -459,10 +470,11 @@
         const r = ed.get(); if (r.error) return toast(r.error, { error: true });
         colores = r.colores; if (!colores.length) return toast('Agrega al menos un color, o desmarca «Viene en varios colores».', { error: true });
       }
+      if (nuevo && g('#pfCamp').value.trim()) U.lsSet('vedith-campana', g('#pfCamp').value.trim());
       const btn = m.foot.querySelector('#pfSave'); btn.disabled = true;
       try {
         const id = await API.saveProducto({
-          usa_colores: usa, colores, avisar_stock: chkAv.checked,
+          usa_colores: usa, colores, avisar_stock: chkAv.checked, campana: g('#pfCamp').value, conservar: g('#pfConservar').checked,
           id: p.id, nombre, categoria_id: g('#pfCat').value, descripcion: g('#pfDesc').value, precio,
           costo: g('#pfCosto').value, precio_regateo: reg, cantidad: usa ? colores.reduce((s, c) => s + c.cantidad, 0) : g('#pfCant').value, stock_minimo: g('#pfMin').value,
           codigo_tupperware: g('#pfTup').value, activo: g('#pfActivo').checked, fotos

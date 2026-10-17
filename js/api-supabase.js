@@ -36,6 +36,7 @@
       : (r.fotos_producto || []).slice().sort((a, b) => a.orden - b.orden).map((f) => f.url_foto),
     usa_colores: !!r.usa_colores,
     avisar_stock: r.avisar_stock !== false && r.sin_control !== true,
+    campana: r.campana || '', archivado: !!r.archivado, archivado_at: r.archivado_at || null, conservar: !!r.conservar, agotado_desde: r.agotado_desde || null,
     colores: (r.producto_colores || r.colores || []).slice()
       .sort((a, b) => (a.orden || 0) - (b.orden || 0) || String(a.color).localeCompare(String(b.color), 'es'))
       .map((c) => ({ id: c.id, color: c.color, hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
@@ -84,7 +85,8 @@
         let rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden), producto_colores(*)').order('nombre').limit(5000);
         this._colores = !rows.error;
         if (rows.error) rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden)').order('nombre').limit(5000);
-        return ok(rows).map(normProd);
+        const arr = ok(rows); if (arr.length) this._campanas = ('archivado' in arr[0]);
+        return arr.map(normProd);
       }
       const rows = ok(await sb.from('vista_catalogo').select('*').order('nombre').limit(5000));
       return rows.map(normProd);
@@ -106,6 +108,7 @@
         row.avisar_stock = p.avisar_stock !== false;
         if (row.usa_colores) row.cantidad = colores.reduce((s, c) => s + (parseInt(c.cantidad, 10) || 0), 0);
       }
+      if (this._campanas) { row.campana = (p.campana || '').trim() || null; row.conservar = !!p.conservar; }
       if (p.precio_catalogo !== undefined) row.precio_catalogo = p.precio_catalogo === '' || p.precio_catalogo == null ? null : Number(p.precio_catalogo);
       let id = p.id;
       if (id) ok(await sb.from('productos').update(row).eq('id', id));
@@ -126,6 +129,13 @@
       }
       return id;
     },
+    /* ---- archivado y limpieza (productos que van por tandadas) ---- */
+    async archivarProductos(ids) { if (ids.length) ok(await sb.from('productos').update({ archivado: true, activo: false, archivado_at: new Date().toISOString() }).in('id', ids)); },
+    async restaurarProductos(ids) { if (ids.length) ok(await sb.from('productos').update({ archivado: false, activo: true, archivado_at: null, agotado_desde: null }).in('id', ids)); },
+    async archivarCampana(nombre) { return ok(await sb.from('productos').update({ archivado: true, activo: false, archivado_at: new Date().toISOString() }).eq('campana', nombre).eq('archivado', false).select('id')).length; },
+    async borrarProductos(ids) { if (ids.length) ok(await sb.from('productos').delete().in('id', ids)); },
+    async archivarAgotadosAhora() { return ok(await sb.rpc('fn_archivar_agotados', {})); },
+    async depurarAhora() { return ok(await sb.rpc('fn_depurar', {})); },
     async deleteProducto(id) { ok(await sb.from('productos').delete().eq('id', id)); },
     async setEtiquetaImpresa(ids, impresa) {
       if (!ids.length) return;
@@ -279,12 +289,12 @@
     /* ---- importador de productos desde el catálogo ---- */
     async zonasProductos() { return ok(await sb.from('catalogo_productos').select('*')); },
     // Crea cada producto como BORRADOR (oculto, sin precio de venta ni foto) y anota dónde está en el catálogo
-    async importarProductos(catalogoId, items) {
+    async importarProductos(catalogoId, items, campana) {
       const creados = [];
       for (const it of items) {
         const id = await this.saveProducto({
           nombre: it.nombre, descripcion: it.descripcion || '', codigo_tupperware: it.codigo || '', precio: 0, costo: 0, cantidad: 0,
-          stock_minimo: 2, activo: false, fotos: [], precio_catalogo: it.precio_catalogo
+          stock_minimo: 2, activo: false, fotos: [], precio_catalogo: it.precio_catalogo, avisar_stock: false, campana: campana || ''
         });
         ok(await sb.from('catalogo_productos').insert({ catalogo_id: catalogoId, producto_id: id, pagina: it.pagina, x: it.x, y: it.y, w: it.w, h: it.h }));
         creados.push(id);

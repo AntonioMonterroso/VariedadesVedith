@@ -177,7 +177,7 @@
       const [prods, ventas, abonos, gastos, clientes, cajas, movs] = await Promise.all([API.productos(), API.ventas(), API.abonos(), API.gastos(), API.clientes(), API.cajas(), API.movimientos()]);
       const wb = XLSX.utils.book_new();
       const add = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ vacío: '' }]), name);
-      add('Productos', prods.map((p) => ({ Código: p.codigo, 'Código Tupperware': p.codigo_tupperware, Nombre: p.nombre, Categoría: p.categoria, Precio: p.precio, Costo: p.costo, Cantidad: p.cantidad, 'Aviso en': p.stock_minimo, Visible: p.activo ? 'Sí' : 'No', 'Etiqueta impresa': p.etiqueta_impresa_at ? fmtDate(p.etiqueta_impresa_at) : 'No', Colores: (p.colores || []).map((c) => `${c.color}: ${c.cantidad}`).join(' | '), 'Avisar stock': p.avisar_stock === false ? 'No' : 'Sí', Fotos: p.fotos.join(' | '), Descripción: p.descripcion })));
+      add('Productos', prods.map((p) => ({ Código: p.codigo, 'Código Tupperware': p.codigo_tupperware, Nombre: p.nombre, Categoría: p.categoria, Precio: p.precio, Costo: p.costo, Cantidad: p.cantidad, 'Aviso en': p.stock_minimo, Visible: p.activo ? 'Sí' : 'No', 'Etiqueta impresa': p.etiqueta_impresa_at ? fmtDate(p.etiqueta_impresa_at) : 'No', Campaña: p.campana, Archivado: p.archivado ? 'Sí' : 'No', Colores: (p.colores || []).map((c) => `${c.color}: ${c.cantidad}`).join(' | '), 'Avisar stock': p.avisar_stock === false ? 'No' : 'Sí', Fotos: p.fotos.join(' | '), Descripción: p.descripcion })));
       add('Ventas', ventas.map((v) => ({ Fecha: new Date(v.created_at).toLocaleString('es-GT'), Producto: v.producto_nombre, Código: v.producto_codigo, Cantidad: v.cantidad, 'Precio c/u': v.precio_unitario, Total: v.total, Costo: v.costo_unitario * v.cantidad, Pago: v.forma_pago, 'Cómo pagó': APP.METODOS[v.metodo_cobro] || '', Cuenta: APP.cuentaNombre(v.cuenta_id), 'Precio de lista': v.precio_lista, Cliente: v.cliente_nombre, 'Vendido por': v.vendido_por, Anulada: v.anulada ? 'Sí' : '' })));
       add('Abonos', abonos.map((a) => ({ Fecha: new Date(a.created_at).toLocaleString('es-GT'), Monto: a.monto, Nota: a.nota, Venta: a.venta_id })));
       add('Cajas', cajas.flatMap((c) => (c.items.length ? c.items : [{}]).map((i) => ({ Caja: c.nombre, Pedido: c.numero_pedido, 'Fecha pedido': c.fecha_pedido, Estado: c.estado, Total: c.monto_total, Pagada: c.pagada ? 'Sí' : 'No', 'Pagada el': c.pagada_el, 'Cómo se pagó': APP.METODOS[c.metodo_pago] || '', Cuenta: APP.cuentaNombre(c.cuenta_id), Producto: i.producto_nombre, Cantidad: i.cantidad, 'Costo c/u': i.costo_unitario }))));
@@ -397,6 +397,12 @@
           <div class="row"><input class="input grow" id="aCatNew" placeholder="Nueva categoría" maxlength="40"><button type="button" class="btn secondary" id="aCatAdd">Agregar</button></div>
         </section>
 
+        <section class="card stack"><h2>Orden y limpieza</h2>
+          <p class="small muted">Los productos van por tandadas: cuando uno se agota y pasan unos días, se archiva solo (sale de la lista, del catálogo y del QR). Lo archivado se borra de la base pasado otro plazo. Las ventas y los reportes no se tocan.</p>
+          <div class="grid-2"><label class="field">Archivar agotados después de (días)<input class="input" id="aDiasA" type="number" inputmode="numeric" min="1" max="60" value="${esc(c.dias_agotado_archivar || 3)}"></label>
+            <label class="field">Borrar archivados después de (días)<input class="input" id="aDiasB" type="number" inputmode="numeric" min="1" max="365" value="${esc(c.dias_borrar_archivados || 30)}"></label></div>
+          <div class="row wrap"><button type="button" class="btn" id="aLimGuardar">Guardar plazos</button><button type="button" class="btn secondary" id="aArchAhora">Archivar agotados ahora</button><button type="button" class="btn secondary" id="aDepurar">Limpiar la base ahora</button></div>
+        </section>
         <section class="card stack"><h2>Datos</h2>
           <div class="row wrap"><button type="button" class="btn secondary" id="aExcel">${icon('download')} Descargar respaldo en Excel</button>
           <a class="btn secondary" href="#/notificaciones">${icon('bell')} Avisos en el teléfono</a>
@@ -431,6 +437,21 @@
       try { await API.addCategoria(v); g('#aCatNew').value = ''; await APP.refreshCore(); pintarCats(); } catch (e) { APP.handleErr(/duplicate|unique/i.test(e.message) ? new Error('Esa categoría ya existe.') : e); }
     });
     g('#aExcel').addEventListener('click', APP.exportarExcel);
+    const sinSql = (e) => /PGRST202|Could not find the function|fn_archivar|fn_depurar/i.test((e.code || '') + ' ' + (e.message || ''));
+    const aviso = (e) => (sinSql(e) ? toast('Falta correr migracion_campanas.sql en Supabase.', { error: true, ms: 5000 }) : APP.handleErr(e));
+    g('#aLimGuardar').addEventListener('click', async () => {
+      const a = parseInt(g('#aDiasA').value, 10), b = parseInt(g('#aDiasB').value, 10);
+      if (!(a >= 1) || !(b >= 1)) return toast('Los plazos deben ser de 1 día o más.', { error: true });
+      try { await API.setConfig({ dias_agotado_archivar: a, dias_borrar_archivados: b }); await APP.refreshCore(); toast('Plazos guardados'); } catch (e) { APP.handleErr(e); }
+    });
+    g('#aArchAhora').addEventListener('click', async () => {
+      if (!await confirmDialog({ title: 'Archivar agotados', message: 'Se archivan los productos que se agotaron hace más días que el plazo (los marcados «Mantener siempre» no).', okLabel: 'Archivar' })) return;
+      try { const n = await API.archivarAgotadosAhora(); await APP.refreshCore(); toast(n ? `${n} productos archivados` : 'No había nada que archivar todavía'); } catch (e) { aviso(e); }
+    });
+    g('#aDepurar').addEventListener('click', async () => {
+      if (!await confirmDialog({ title: 'Limpiar la base', message: 'Se borran para siempre los productos archivados que ya pasaron su plazo, y los avisos, escaneos y registros viejos. Las ventas y reportes no cambian.', okLabel: 'Limpiar', danger: true })) return;
+      try { const r = await API.depurarAhora(); await APP.refreshCore(); toast(`Listo: ${r.productos} productos, ${r.avisos} avisos y ${r.escaneos} escaneos borrados`, { ms: 5000 }); } catch (e) { aviso(e); }
+    });
     g('#aAyuda').addEventListener('click', APP.openHelp);
     g('#aSalir').addEventListener('click', APP.logout);
     const rs = g('#aReset'); if (rs) rs.addEventListener('click', () => API.reiniciarDemo());
