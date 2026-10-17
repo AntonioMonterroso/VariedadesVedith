@@ -37,12 +37,18 @@
 
   const hexPorNombre = (n) => { const x = APP.presetsColor().find(([k]) => igual(k, n || '')); return x ? x[1] : ''; };
   APP.hexColor = (nombre, hex) => (validHex(hex) ? hex : hexPorNombre(nombre));
-  APP.dot = (nombre, hex) => { const h = APP.hexColor(nombre, hex); return `<span class="col-dot ${h ? '' : 'sin'}" ${h ? `style="background:${h}"` : ''} aria-hidden="true"></span>`; };
+  // Punto de color; si son varios colores ("Rosa + Azul") se dibuja partido en sectores
+  APP.dot = (nombre, hex, hexes) => {
+    let hs = String(hexes || '').split(',').filter(validHex);
+    if (hs.length < 2 && String(nombre || '').includes(' + ')) hs = String(nombre).split(' + ').map((n) => hexPorNombre(n)).filter(Boolean);
+    if (hs.length > 1) { const k = 100 / hs.length; return `<span class="col-dot" style="background:conic-gradient(${hs.map((h, i) => `${h} ${i * k}% ${(i + 1) * k}%`).join(',')})" aria-hidden="true"></span>`; }
+    const h = APP.hexColor(nombre, hex); return `<span class="col-dot ${h ? '' : 'sin'}" ${h ? `style="background:${h}"` : ''} aria-hidden="true"></span>`;
+  };
   const tagDis = `<span class="dis-tag" aria-hidden="true">${icon('tag', 'sm')}</span>`;
   // Marca visual de una variante: etiqueta si tiene diseño, punto si tiene color
   APP.vdot = (c) => {
     const t = c.tono || (!c.diseno ? c.color : '');
-    return `${c.diseno ? tagDis : ''}${t ? APP.dot(t, c.hex) : ''}`;
+    return `${c.diseno ? tagDis : ''}${t ? APP.dot(t, c.hex, c.hexes) : ''}`;
   };
   APP.etiquetaVar = (p) => {
     const cs = p.colores || [], d = cs.some((c) => c.diseno), t = cs.some((c) => c.tono || !c.diseno);
@@ -53,9 +59,9 @@
   APP.dots = (p, max = 6) => {
     if (!(p.usa_colores && p.colores && p.colores.length)) return '';
     const tonos = [], vistos = new Set();
-    p.colores.forEach((c) => { const t = c.tono || (!c.diseno ? c.color : ''); if (t && !vistos.has(t.toLowerCase())) { vistos.add(t.toLowerCase()); tonos.push({ n: t, h: c.hex }); } });
+    p.colores.forEach((c) => { const t = c.tono || (!c.diseno ? c.color : ''); if (t && !vistos.has(t.toLowerCase())) { vistos.add(t.toLowerCase()); tonos.push({ n: t, h: c.hex, hs: c.hexes }); } });
     const dis = new Set(p.colores.map((c) => c.diseno).filter(Boolean));
-    return `<span class="col-dots" role="img" aria-label="${esc(p.colores.map((c) => c.color).join(', '))}">${tonos.slice(0, max).map((t) => APP.dot(t.n, t.h)).join('')}${tonos.length > max ? `<span class="xs muted">+${tonos.length - max}</span>` : ''}${dis.size ? `<span class="xs muted">${tonos.length ? ' · ' : ''}${dis.size} ${dis.size === 1 ? 'diseño' : 'diseños'}</span>` : ''}</span>`;
+    return `<span class="col-dots" role="img" aria-label="${esc(p.colores.map((c) => c.color).join(', '))}">${tonos.slice(0, max).map((t) => APP.dot(t.n, t.h, t.hs)).join('')}${tonos.length > max ? `<span class="xs muted">+${tonos.length - max}</span>` : ''}${dis.size ? `<span class="xs muted">${tonos.length ? ' · ' : ''}${dis.size} ${dis.size === 1 ? 'diseño' : 'diseños'}</span>` : ''}</span>`;
   };
 
   /* Con el aviso apagado nunca se bloquea una venta por falta de existencia */
@@ -82,6 +88,23 @@
     m.body.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { const c = b.dataset.c; m.close(); cb(c); }));
   };
 
+  // Elegir dos o más colores para una sola opción (ej.: "Rosa + Azul"). cb(nombre, hexPrimero, hexesComa)
+  function combinar(cb) {
+    const sel = [];
+    const m = openModal({ title: 'Combinar colores', body: `<p class="muted small">Toca dos o más colores que lleva la misma pieza.</p>
+      <div class="chips" style="flex-wrap:wrap;overflow:visible">${APP.presetsColor().map(([n, h]) => `<button type="button" class="chip col-chip" data-n="${esc(n)}" data-h="${esc(h)}" aria-pressed="false">${APP.dot(n, h)}${esc(n)}</button>`).join('')}</div>
+      <div class="row small" id="cbVista" aria-live="polite"></div>`,
+      footer: '<button type="button" class="btn secondary" data-no>Cancelar</button><button type="button" class="btn" data-ok disabled>Usar esta combinación</button>' });
+    const ok = m.foot.querySelector('[data-ok]');
+    const pintar = () => { m.body.querySelector('#cbVista').innerHTML = sel.length ? `${APP.dot(sel.map((x) => x.n).join(' + '), '', sel.map((x) => x.h).join(','))}<b>${esc(sel.map((x) => x.n).join(' + '))}</b>` : ''; ok.disabled = sel.length < 2; };
+    m.body.querySelectorAll('[data-n]').forEach((b) => b.addEventListener('click', () => {
+      const i = sel.findIndex((x) => x.n === b.dataset.n); if (i >= 0) sel.splice(i, 1); else sel.push({ n: b.dataset.n, h: b.dataset.h });
+      b.setAttribute('aria-pressed', String(i < 0)); pintar();
+    }));
+    m.foot.querySelector('[data-no]').addEventListener('click', () => m.close());
+    ok.addEventListener('click', () => { m.close(); cb(sel.map((x) => x.n).join(' + '), sel[0].h, sel.map((x) => x.h).filter(validHex).join(',')); });
+  }
+
   /* =====================================================================
      EDITOR DE VARIANTES: diseños y/o colores, con existencia de cada combinación
      host: elemento · rows: [{color, diseno, tono, hex, cantidad}] · opts.onChange(total)
@@ -92,14 +115,14 @@
     (rows || []).forEach((r) => {
       const d = r.diseno || '', t = r.tono || (!r.diseno ? r.color : '');
       if (d && !dis.some((x) => igual(x, d))) dis.push(d);
-      if (t && !tonos.some((x) => igual(x.n, t))) tonos.push({ n: t, h: validHex(r.hex) ? r.hex : hexPorNombre(t) });
+      if (t && !tonos.some((x) => igual(x.n, t))) tonos.push({ n: t, h: validHex(r.hex) ? r.hex : hexPorNombre(t), hs: r.hexes || '' });
       qty[llave(d, t)] = Number(r.cantidad) || 0;
     });
     const existentes = new Set((rows || []).map((r) => llave(r.diseno || '', r.tono || (!r.diseno ? r.color : ''))));
     const combos = () => {
       if (!dis.length && !tonos.length) return [];
       const out = [];
-      (dis.length ? dis : ['']).forEach((d) => (tonos.length ? tonos : [{ n: '', h: '' }]).forEach((t) => out.push({ d, t: t.n, h: t.h })));
+      (dis.length ? dis : ['']).forEach((d) => (tonos.length ? tonos : [{ n: '', h: '', hs: '' }]).forEach((t) => out.push({ d, t: t.n, h: t.h, hs: t.hs || '' })));
       return out;
     };
     const total = () => combos().reduce((s, c) => s + (qty[llave(c.d, c.t)] || 0), 0);
@@ -107,13 +130,13 @@
 
     function pintar() {
       const nomDis = [...APP.presetsDiseno(), ...dis.filter((d) => !APP.presetsDiseno().some((p) => igual(p, d)))];
-      const nomCol = [...APP.presetsColor(), ...tonos.filter((t) => !APP.presetsColor().some(([p]) => igual(p, t.n))).map((t) => [t.n, t.h])];
+      const nomCol = [...APP.presetsColor().map(([n, h]) => [n, h, '']), ...tonos.filter((t) => !APP.presetsColor().some(([p]) => igual(p, t.n))).map((t) => [t.n, t.h, t.hs || ''])];
       const grupos = combos();
       const filas = !grupos.length ? '<p class="small muted">Elige al menos un diseño o un color para poner cuántas piezas hay.</p>'
         : (dis.length ? dis : ['']).map((d) => `<div class="ve-grupo">${d ? `<div class="ve-cab">${tagDis}<b>${esc(d)}</b></div>` : ''}
             ${(tonos.length ? tonos : [{ n: '', h: '' }]).map((t) => {
               const k = llave(d, t.n);
-              return `<div class="lote-fila" data-k="${esc(k)}">${t.n ? APP.dot(t.n, t.h) : tagDis}<span class="grow t1">${esc(t.n || d)}</span>
+              return `<div class="lote-fila" data-k="${esc(k)}">${t.n ? APP.dot(t.n, t.h, t.hs) : tagDis}<span class="grow t1">${esc(t.n || d)}</span>
                 <div class="stepper" role="group" aria-label="Existencia"><button type="button" data-minus aria-label="Menos">${icon('minus')}</button><input type="number" inputmode="numeric" min="0" value="${qty[k] || 0}" data-cant aria-label="Piezas"><button type="button" data-plus aria-label="Más">${icon('plus')}</button></div></div>`;
             }).join('')}</div>`).join('');
       host.innerHTML = `<div class="stack">
@@ -122,7 +145,8 @@
           <div class="chips" style="flex-wrap:wrap;overflow:visible">${nomDis.map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="${dis.some((x) => igual(x, n))}"><span class="dis-tag">${icon('tag', 'sm')}</span>${esc(n)}</button>`).join('')}</div>
           <div class="row"><input class="input grow" data-nd maxlength="30" placeholder="Otro diseño" aria-label="Otro diseño"><button type="button" class="btn secondary sm" data-addd>Agregar</button></div></div>
         <div class="stack-sm"><span class="small" style="font-weight:800">Colores <span class="muted" style="font-weight:600">· si no tiene, déjalo vacío</span></span>
-          <div class="chips" style="flex-wrap:wrap;overflow:visible">${nomCol.map(([n, h]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" aria-pressed="${tonos.some((x) => igual(x.n, n))}"><span class="col-dot ${h ? '' : 'sin'}" ${h ? `style="background:${h}"` : ''}></span>${esc(n)}</button>`).join('')}</div>
+          <div class="chips" style="flex-wrap:wrap;overflow:visible">${nomCol.map(([n, h, hs]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" data-hs="${esc(hs)}" aria-pressed="${tonos.some((x) => igual(x.n, n))}">${APP.dot(n, h, hs)}${esc(n)}</button>`).join('')}</div>
+          <button type="button" class="btn ghost sm" data-combinar style="justify-self:start">${icon('plus', 'sm')} Combinar dos o más colores</button>
           <div class="row"><label class="col-pick" aria-label="Tono del color nuevo"><input type="color" value="#cccccc" data-hc><span class="col-dot" style="background:#cccccc"></span></label><input class="input grow" data-nt maxlength="30" placeholder="Otro color" aria-label="Otro color"><button type="button" class="btn secondary sm" data-addt>Agregar</button></div></div>
         <label class="row small"><input type="checkbox" data-guardar checked style="width:20px;height:20px;accent-color:var(--pink-600)"> <span>Guardar lo nuevo en mis predeterminados para la próxima</span></label>
         <div class="stack-sm" data-filas>${filas}</div>
@@ -133,7 +157,8 @@
         if (i >= 0) lista.splice(i, 1); else lista.push(extra || nombre);
       };
       host.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { alternar(dis, b.dataset.d); pintar(); aviso(); }));
-      host.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { alternar(tonos, b.dataset.t, { n: b.dataset.t, h: b.dataset.h }); pintar(); aviso(); }));
+      host.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { alternar(tonos, b.dataset.t, { n: b.dataset.t, h: b.dataset.h, hs: b.dataset.hs || '' }); pintar(); aviso(); }));
+      host.querySelector('[data-combinar]').addEventListener('click', () => combinar((n, h, hs) => { if (!tonos.some((x) => igual(x.n, n))) tonos.push({ n, h, hs }); pintar(); aviso(); }));
       const guardar = () => host.querySelector('[data-guardar]').checked;
       const nuevo = async (tipo, inputSel) => {
         const inp = host.querySelector(inputSel), nombre = inp.value.trim(); if (!nombre) return inp.focus();
@@ -161,7 +186,7 @@
       get() {
         // solo las combinaciones con piezas o que ya existían; si no hay ninguna, todas
         const todas = combos(), usadas = todas.filter((c) => (qty[llave(c.d, c.t)] || 0) > 0 || existentes.has(llave(c.d, c.t)));
-        return { colores: (usadas.length ? usadas : todas).map((c) => ({ color: [c.d, c.t].filter(Boolean).join(' · '), diseno: c.d || null, tono: c.t || null, hex: c.t && validHex(c.h) ? c.h : '', cantidad: qty[llave(c.d, c.t)] || 0 })) };
+        return { colores: (usadas.length ? usadas : todas).map((c) => ({ color: [c.d, c.t].filter(Boolean).join(' · '), diseno: c.d || null, tono: c.t || null, hex: c.t && validHex(c.h) ? c.h : '', hexes: c.t && String(c.hs || '').split(',').filter(validHex).length > 1 ? c.hs : '', cantidad: qty[llave(c.d, c.t)] || 0 })) };
       }
     };
   };
@@ -314,29 +339,30 @@
     }
     // Opción nueva: un diseño, un color, o los dos juntos
     function opcionNueva(p, e) {
-      let dSel = '', tSel = '', hSel = '';
+      let dSel = '', tSel = [], hSel = [];
       const disUsados = [...new Set(p.colores.map((c) => c.diseno).filter(Boolean))];
       const m = openModal({ title: 'Opción nueva', body: `<p class="muted small">${esc(p.nombre)} · elige un diseño, un color o los dos</p>
         <div class="stack-sm"><b class="small">Diseño</b><div class="chips" style="flex-wrap:wrap;overflow:visible">${[...new Set([...disUsados, ...APP.presetsDiseno()])].map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join('')}</div>
           <input class="input" id="onD" maxlength="30" placeholder="O escribe otro diseño"></div>
-        <div class="stack-sm"><b class="small">Color</b><div class="chips" style="flex-wrap:wrap;overflow:visible">${APP.presetsColor().map(([n, h]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" aria-pressed="false"><span class="col-dot ${h ? '' : 'sin'}" ${h ? `style="background:${h}"` : ''}></span>${esc(n)}</button>`).join('')}</div>
+        <div class="stack-sm"><b class="small">Color <span class="muted" style="font-weight:600">· toca varios si lleva más de uno</span></b><div class="chips" style="flex-wrap:wrap;overflow:visible">${APP.presetsColor().map(([n, h]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" aria-pressed="false">${APP.dot(n, h)}${esc(n)}</button>`).join('')}</div>
           <input class="input" id="onT" maxlength="30" placeholder="O escribe otro color"></div>`,
         footer: '<button type="button" class="btn secondary" data-no>Cancelar</button><button type="button" class="btn" data-ok>Agregar</button>' });
-      const marcar = (sel, v) => m.body.querySelectorAll(sel).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[sel === '[data-d]' ? 'd' : 't'] === v)));
+      const marcar = (sel, v) => m.body.querySelectorAll(sel).forEach((b) => b.setAttribute('aria-pressed', String(Array.isArray(v) ? v.includes(b.dataset.t) : b.dataset.d === v)));
       m.body.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { dSel = dSel === b.dataset.d ? '' : b.dataset.d; m.body.querySelector('#onD').value = ''; marcar('[data-d]', dSel); }));
-      m.body.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { if (tSel === b.dataset.t) { tSel = ''; hSel = ''; } else { tSel = b.dataset.t; hSel = b.dataset.h; } m.body.querySelector('#onT').value = ''; marcar('[data-t]', tSel); }));
+      m.body.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { const i = tSel.indexOf(b.dataset.t); if (i >= 0) { tSel.splice(i, 1); hSel.splice(i, 1); } else { tSel.push(b.dataset.t); hSel.push(b.dataset.h); } m.body.querySelector('#onT').value = ''; marcar('[data-t]', tSel); }));
       m.foot.querySelector('[data-no]').addEventListener('click', () => m.close());
       m.foot.querySelector('[data-ok]').addEventListener('click', () => {
-        const d = (m.body.querySelector('#onD').value.trim() || dSel), t = (m.body.querySelector('#onT').value.trim() || tSel);
+        const d = (m.body.querySelector('#onD').value.trim() || dSel), escrito = m.body.querySelector('#onT').value.trim(), t = escrito || tSel.join(' + ');
         if (!d && !t) return toast('Elige un diseño o un color.', { error: true });
         const color = [d, t].filter(Boolean).join(' · ');
         if (p.colores.some((c) => igual(c.color, color)) || e.extra.some((x) => igual(x.color, color))) { m.close(); return toast('Esa opción ya está en la lista.', { error: true }); }
-        e.extra.push({ color, diseno: d || null, tono: t || null, hex: t ? (hSel || hexPorNombre(t)) : '' }); e.qty[color] = 0; m.close(); pintar();
+        const hsv = escrito ? '' : hSel.filter(validHex).join(',');
+        e.extra.push({ color, diseno: d || null, tono: t || null, hex: t ? ((escrito ? hexPorNombre(t) : hSel[0]) || '') : '', hexes: hsv.split(',').length > 1 ? hsv : '' }); e.qty[color] = 0; m.close(); pintar();
       });
     }
     async function guardar() {
       const items = [];
-      lote.forEach((e) => { const p = APP.prod(e.pid); if (!p) return; Object.entries(e.qty).forEach(([color, n]) => { if (n > 0) { const ex = e.extra.find((x) => x.color === color); items.push({ producto_id: e.pid, color: p.usa_colores ? color : null, hex: ex ? ex.hex : null, diseno: ex ? ex.diseno : null, tono: ex ? ex.tono : null, cantidad: n }); } }); });
+      lote.forEach((e) => { const p = APP.prod(e.pid); if (!p) return; Object.entries(e.qty).forEach(([color, n]) => { if (n > 0) { const ex = e.extra.find((x) => x.color === color); items.push({ producto_id: e.pid, color: p.usa_colores ? color : null, hex: ex ? ex.hex : null, hexes: ex ? ex.hexes : null, diseno: ex ? ex.diseno : null, tono: ex ? ex.tono : null, cantidad: n }); } }); });
       if (!items.length) return;
       const btn = main.querySelector('#irGuardar'); btn.disabled = true;
       try {

@@ -9,9 +9,11 @@
 --   diseno → la parte de diseño (opcional)
 --   tono   → la parte de color (opcional)
 -- Las variantes que ya existían quedan como color (tono = color).
+-- Un color de varios tonos se escribe «Rosa + Azul» y guarda sus tonos en hexes.
 -- =====================================================================
 alter table producto_colores add column if not exists diseno text;
 alter table producto_colores add column if not exists tono   text;
+alter table producto_colores add column if not exists hexes  text;   -- tonos de una variante con dos o más colores, separados por coma
 update producto_colores set tono = color where tono is null and diseno is null;
 
 create or replace view vista_catalogo as
@@ -22,7 +24,7 @@ select p.id, p.codigo, p.nombre, p.categoria_id, c.nombre as categoria,
        p.precio_regateo,
        p.usa_colores,
        (not p.avisar_stock) as sin_control,
-       coalesce((select json_agg(json_build_object('id', k.id, 'color', k.color, 'hex', k.hex, 'cantidad', k.cantidad, 'diseno', k.diseno, 'tono', k.tono) order by k.orden, k.color)
+       coalesce((select json_agg(json_build_object('id', k.id, 'color', k.color, 'hex', k.hex, 'cantidad', k.cantidad, 'diseno', k.diseno, 'tono', k.tono, 'hexes', k.hexes) order by k.orden, k.color)
                    from producto_colores k where k.producto_id = p.id), '[]'::json) as colores
 from productos p
 left join categorias c on c.id = p.categoria_id
@@ -33,7 +35,7 @@ select p.codigo, p.nombre, p.descripcion, c.nombre as categoria, p.precio,
        (p.cantidad > 0 or not p.avisar_stock) as disponible,
        coalesce((select json_agg(f.url_foto order by f.orden)
                    from fotos_producto f where f.producto_id = p.id), '[]'::json) as fotos,
-       coalesce((select json_agg(json_build_object('color', k.color, 'hex', k.hex, 'disponible', (k.cantidad > 0 or not p.avisar_stock), 'diseno', k.diseno, 'tono', k.tono) order by k.orden, k.color)
+       coalesce((select json_agg(json_build_object('color', k.color, 'hex', k.hex, 'disponible', (k.cantidad > 0 or not p.avisar_stock), 'diseno', k.diseno, 'tono', k.tono, 'hexes', k.hexes) order by k.orden, k.color)
                    from producto_colores k where k.producto_id = p.id and p.usa_colores), '[]'::json) as colores
 from productos p
 left join categorias c on c.id = p.categoria_id
@@ -42,7 +44,7 @@ where p.activo;
 -- Ingreso rápido: al crear una variante nueva guarda también su diseño y su color
 create or replace function ingreso_rapido(p_items jsonb) returns int
 language plpgsql security definer set search_path = public as $$
-declare it jsonb; v_uc boolean; v_n int; v_col text; v_total int := 0; v_pid uuid; v_d text; v_t text;
+declare it jsonb; v_uc boolean; v_n int; v_col text; v_total int := 0; v_pid uuid; v_d text; v_t text; v_hx text;
 begin
   if not es_admin() then raise exception 'NO_AUTORIZADO'; end if;
   for it in select * from jsonb_array_elements(coalesce(p_items, '[]'::jsonb)) loop
@@ -51,14 +53,15 @@ begin
     v_col := nullif(trim(coalesce(it->>'color', '')), '');
     v_d   := nullif(trim(coalesce(it->>'diseno', '')), '');
     v_t   := nullif(trim(coalesce(it->>'tono', '')), '');
+    v_hx  := nullif(trim(coalesce(it->>'hexes', '')), '');
     if v_n < 1 then continue; end if;
     select usa_colores into v_uc from productos where id = v_pid for update;
     if not found then raise exception 'PRODUCTO_NO_ENCONTRADO'; end if;
     if v_uc then
-      insert into producto_colores (producto_id, color, hex, cantidad, diseno, tono)
+      insert into producto_colores (producto_id, color, hex, cantidad, diseno, tono, hexes)
       values (v_pid, coalesce(v_col, 'Sin especificar'),
               case when (it->>'hex') ~* '^#[0-9a-f]{6}$' then it->>'hex' end, v_n, v_d,
-              case when v_d is null and v_t is null then coalesce(v_col, 'Sin especificar') else v_t end)
+              case when v_d is null and v_t is null then coalesce(v_col, 'Sin especificar') else v_t end, v_hx)
       on conflict (producto_id, color) do update
         set cantidad = producto_colores.cantidad + excluded.cantidad, hex = coalesce(producto_colores.hex, excluded.hex);
     else

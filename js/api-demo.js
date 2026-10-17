@@ -55,11 +55,11 @@
   }
 
   // Suma (o resta) piezas a un producto; si tiene colores, al color indicado
-  function sumarPiezas(p, color, n, hex, diseno, tono) {
+  function sumarPiezas(p, color, n, hex, diseno, tono, hexes) {
     if (p.usa_colores) {
       const nombre = (color || '').trim() || 'Sin especificar';
       let c = p.colores.find((k) => k.color === nombre);
-      if (!c) { if (n < 0) return; c = { id: uid(), color: nombre, diseno: diseno || '', tono: tono || (diseno ? '' : nombre), hex: hex || '', cantidad: 0, orden: p.colores.length }; p.colores.push(c); }
+      if (!c) { if (n < 0) return; c = { id: uid(), color: nombre, diseno: diseno || '', tono: tono || (diseno ? '' : nombre), hexes: hexes || '', hex: hex || '', cantidad: 0, orden: p.colores.length }; p.colores.push(c); }
       c.cantidad = Math.max(0, c.cantidad + n);
       p.cantidad = p.colores.reduce((s, k) => s + k.cantidad, 0);
     } else p.cantidad = Math.max(0, p.cantidad + n);
@@ -117,7 +117,7 @@
       };
       const cols = p.usa_colores ? (p.colores || []).filter((c) => (c.color || '').trim()) : [];
       row.usa_colores = cols.length > 0;
-      row.colores = cols.map((c, i) => ({ id: c.id || uid(), color: c.color.trim(), diseno: c.diseno || '', tono: c.tono || '', hex: c.hex || '', cantidad: parseInt(c.cantidad, 10) || 0, orden: i }));
+      row.colores = cols.map((c, i) => ({ id: c.id || uid(), color: c.color.trim(), diseno: c.diseno || '', tono: c.tono || '', hexes: c.hexes || '', hex: c.hex || '', cantidad: parseInt(c.cantidad, 10) || 0, orden: i }));
       if (row.usa_colores) row.cantidad = row.colores.reduce((s, c) => s + c.cantidad, 0);
       if (p.id) Object.assign(db.productos.find((x) => x.id === p.id), row);
       else { db.seq += 1; p.id = uid(); db.productos.push({ id: p.id, codigo: 'VED-' + String(db.seq).padStart(4, '0'), etiqueta_impresa_at: null, created_at: now(), ...row }); }
@@ -125,7 +125,7 @@
     },
     async ingresoRapido(items) {
       admin(); let total = 0;
-      for (const it of items) { const p = db.productos.find((x) => x.id === it.producto_id); const n = parseInt(it.cantidad, 10) || 0; if (!p || n < 1) continue; sumarPiezas(p, it.color, n, it.hex, it.diseno, it.tono); total += n; }
+      for (const it of items) { const p = db.productos.find((x) => x.id === it.producto_id); const n = parseInt(it.cantidad, 10) || 0; if (!p || n < 1) continue; sumarPiezas(p, it.color, n, it.hex, it.diseno, it.tono, it.hexes); total += n; }
       save(); return delay(total);
     },
     async archivarProductos(ids) { admin(); db.productos.forEach((p) => { if (ids.includes(p.id)) Object.assign(p, { archivado: true, activo: false, archivado_at: now() }); }); save(); },

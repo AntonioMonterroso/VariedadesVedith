@@ -39,7 +39,7 @@
     campana: r.campana || '', archivado: !!r.archivado, archivado_at: r.archivado_at || null, conservar: !!r.conservar, agotado_desde: r.agotado_desde || null,
     colores: (r.producto_colores || r.colores || []).slice()
       .sort((a, b) => (a.orden || 0) - (b.orden || 0) || String(a.color).localeCompare(String(b.color), 'es'))
-      .map((c) => ({ id: c.id, color: c.color, diseno: c.diseno || '', tono: c.tono || '', hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
+      .map((c) => ({ id: c.id, color: c.color, diseno: c.diseno || '', tono: c.tono || '', hexes: c.hexes || '', hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
   });
 
   window.API = {
@@ -123,8 +123,8 @@
         const nombres = new Set(colores.map((c) => c.color.trim()));
         const sobran = actuales.filter((a) => !nombres.has(a.color)).map((a) => a.id);
         if (colores.length) {
-          const filas = colores.map((c, i) => ({ producto_id: id, color: c.color.trim(), hex: /^#[0-9a-f]{6}$/i.test(c.hex || '') ? c.hex : null, cantidad: parseInt(c.cantidad, 10) || 0, orden: i, diseno: c.diseno || null, tono: c.tono || null }));
-          const quitar = ({ diseno, tono, ...resto }) => resto;   // si aún no se corrió migracion_disenos.sql
+          const filas = colores.map((c, i) => ({ producto_id: id, color: c.color.trim(), hex: /^#[0-9a-f]{6}$/i.test(c.hex || '') ? c.hex : null, cantidad: parseInt(c.cantidad, 10) || 0, orden: i, diseno: c.diseno || null, tono: c.tono || null, hexes: c.hexes || null }));
+          const quitar = ({ diseno, tono, hexes, ...resto }) => resto;   // si aún no se corrió migracion_disenos.sql
           let r = await sb.from('producto_colores').upsert(this._variantes === false ? filas.map(quitar) : filas, { onConflict: 'producto_id,color' });
           if (r.error && this._variantes !== false && /diseno|tono|column/i.test(r.error.message || '')) { this._variantes = false; r = await sb.from('producto_colores').upsert(filas.map(quitar), { onConflict: 'producto_id,color' }); }
           ok(r);

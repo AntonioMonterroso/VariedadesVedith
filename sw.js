@@ -1,6 +1,6 @@
 /* Service worker: funciona sin conexión para lo básico y recibe avisos push.
    Todas las rutas son relativas porque GitHub Pages sirve bajo /<repo>/. */
-const CACHE = 'vedith-v11';
+const CACHE = 'vedith-v12';
 const SHELL = ['./', 'index.html', 'config.js', 'css/styles.css', 'js/util.js', 'js/api-supabase.js', 'js/app-core.js', 'js/app-colores.js',
   'js/app-pages1.js', 'js/app-pages2.js', 'js/app-pages3.js', 'js/app-estados.js', 'js/app-librito.js', 'js/app-catalogos.js', 'js/app-ocr.js', 'js/app-importador.js', 'js/app-dulces.js', 'js/app-boot.js', 'assets/logo-pequeno.png', 'assets/logo-completo.jpg', 'icon-192.png'];
 
