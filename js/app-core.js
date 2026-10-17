@@ -36,6 +36,7 @@
     PIN_REPETIDO: 'Ese PIN ya lo usa la otra cuenta. Elige uno distinto.',
     PIN_INVALIDO: 'El PIN debe tener exactamente 6 números.',
     MAXIMO_5_FOTOS: 'Máximo 5 fotos por producto.',
+    FALTA_SQL_DISENOS: 'Para guardar diseños falta correr migracion_disenos.sql en Supabase.',
     COLOR_REQUERIDO: 'Elige de qué color es.',
     COLOR_NO_ENCONTRADO: 'Ese color ya no existe en el producto.',
     CUENTA_REQUERIDA: 'Elige a qué cuenta entró el dinero.',
@@ -421,7 +422,7 @@
     const colBox = m.body.querySelector('#pfColBox'), chkCol = m.body.querySelector('#pfUsaCol'), chkAv = m.body.querySelector('#pfAvisar');
     let ed = null;
     const montarEd = () => {
-      ed = APP.editorColores(colBox, p.colores || [], { piezasPrevias: (p.colores && p.colores.length) || nuevo ? 0 : Number(p.cantidad) || 0, onChange: (t) => { m.body.querySelector('#pfCant').value = t; } });
+      ed = APP.editorColores(colBox, p.colores || [], { sinDisenos: API._variantes === false, piezasPrevias: (p.colores && p.colores.length) || nuevo ? 0 : Number(p.cantidad) || 0, onChange: (t) => { m.body.querySelector('#pfCant').value = t; } });
       m.body.querySelector('#pfCant').value = ed.total();
     };
     const alternarCol = () => { const on = chkCol.checked; colBox.hidden = !on; m.body.querySelector('#pfCant').disabled = on; if (on && !ed) montarEd(); };

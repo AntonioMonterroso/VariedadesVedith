@@ -119,10 +119,12 @@
       qty[llave(d, t)] = Number(r.cantidad) || 0;
     });
     const existentes = new Set((rows || []).map((r) => llave(r.diseno || '', r.tono || (!r.diseno ? r.color : ''))));
+    let sinDis = (rows || []).some((r) => !r.diseno);   // lo que ya existía sin diseño se conserva como «Sin diseño»
+    const efectivos = () => (dis.length ? [...(sinDis ? [''] : []), ...dis] : ['']);
     const combos = () => {
       if (!dis.length && !tonos.length) return [];
       const out = [];
-      (dis.length ? dis : ['']).forEach((d) => (tonos.length ? tonos : [{ n: '', h: '', hs: '' }]).forEach((t) => out.push({ d, t: t.n, h: t.h, hs: t.hs || '' })));
+      efectivos().forEach((d) => (tonos.length ? tonos : [{ n: '', h: '', hs: '' }]).forEach((t) => { if (d || t.n) out.push({ d, t: t.n, h: t.h, hs: t.hs || '' }); }));
       return out;
     };
     const total = () => combos().reduce((s, c) => s + (qty[llave(c.d, c.t)] || 0), 0);
@@ -133,7 +135,7 @@
       const nomCol = [...APP.presetsColor().map(([n, h]) => [n, h, '']), ...tonos.filter((t) => !APP.presetsColor().some(([p]) => igual(p, t.n))).map((t) => [t.n, t.h, t.hs || ''])];
       const grupos = combos();
       const filas = !grupos.length ? '<p class="small muted">Elige al menos un diseño o un color para poner cuántas piezas hay.</p>'
-        : (dis.length ? dis : ['']).map((d) => `<div class="ve-grupo">${d ? `<div class="ve-cab">${tagDis}<b>${esc(d)}</b></div>` : ''}
+        : efectivos().map((d) => `<div class="ve-grupo">${d ? `<div class="ve-cab">${tagDis}<b>${esc(d)}</b></div>` : (dis.length ? '<div class="ve-cab"><b>Sin diseño</b></div>' : '')}
             ${(tonos.length ? tonos : [{ n: '', h: '' }]).map((t) => {
               const k = llave(d, t.n);
               return `<div class="lote-fila" data-k="${esc(k)}">${t.n ? APP.dot(t.n, t.h, t.hs) : tagDis}<span class="grow t1">${esc(t.n || d)}</span>
@@ -141,9 +143,9 @@
             }).join('')}</div>`).join('');
       host.innerHTML = `<div class="stack">
         ${opts.piezasPrevias > 0 ? `<div class="banner">${icon('info')}<span class="small">Antes tenía ${opts.piezasPrevias} piezas sin repartir. Escríbelas en la opción que corresponda.</span></div>` : ''}
-        <div class="stack-sm"><span class="small" style="font-weight:800">Diseños <span class="muted" style="font-weight:600">· si no tiene, déjalo vacío</span></span>
-          <div class="chips" style="flex-wrap:wrap;overflow:visible">${nomDis.map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="${dis.some((x) => igual(x, n))}"><span class="dis-tag">${icon('tag', 'sm')}</span>${esc(n)}</button>`).join('')}</div>
-          <div class="row"><input class="input grow" data-nd maxlength="30" placeholder="Otro diseño" aria-label="Otro diseño"><button type="button" class="btn secondary sm" data-addd>Agregar</button></div></div>
+        ${opts.sinDisenos ? `<div class="banner">${icon('alert')}<span class="small">Para guardar <b>diseños</b> falta correr <b>migracion_disenos.sql</b> en Supabase. Mientras tanto solo se pueden guardar colores.</span></div>` : `<div class="stack-sm"><span class="small" style="font-weight:800">Diseños <span class="muted" style="font-weight:600">· si no tiene, déjalo vacío</span></span>
+          <div class="chips" style="flex-wrap:wrap;overflow:visible">${dis.length ? `<button type="button" class="chip" data-sd aria-pressed="${sinDis}">Sin diseño</button>` : ''}${nomDis.map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="${dis.some((x) => igual(x, n))}"><span class="dis-tag">${icon('tag', 'sm')}</span>${esc(n)}</button>`).join('')}</div>
+          <div class="row"><input class="input grow" data-nd maxlength="30" placeholder="Otro diseño" aria-label="Otro diseño"><button type="button" class="btn secondary sm" data-addd>Agregar</button></div></div>`}
         <div class="stack-sm"><span class="small" style="font-weight:800">Colores <span class="muted" style="font-weight:600">· si no tiene, déjalo vacío</span></span>
           <div class="chips" style="flex-wrap:wrap;overflow:visible">${nomCol.map(([n, h, hs]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" data-hs="${esc(hs)}" aria-pressed="${tonos.some((x) => igual(x.n, n))}">${APP.dot(n, h, hs)}${esc(n)}</button>`).join('')}</div>
           <button type="button" class="btn ghost sm" data-combinar style="justify-self:start">${icon('plus', 'sm')} Combinar dos o más colores</button>
@@ -157,6 +159,7 @@
         if (i >= 0) lista.splice(i, 1); else lista.push(extra || nombre);
       };
       host.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { alternar(dis, b.dataset.d); pintar(); aviso(); }));
+      const sd = host.querySelector('[data-sd]'); if (sd) sd.addEventListener('click', () => { sinDis = !sinDis; pintar(); aviso(); });
       host.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { alternar(tonos, b.dataset.t, { n: b.dataset.t, h: b.dataset.h, hs: b.dataset.hs || '' }); pintar(); aviso(); }));
       host.querySelector('[data-combinar]').addEventListener('click', () => combinar((n, h, hs) => { if (!tonos.some((x) => igual(x.n, n))) tonos.push({ n, h, hs }); pintar(); aviso(); }));
       const guardar = () => host.querySelector('[data-guardar]').checked;
@@ -167,9 +170,9 @@
         if (guardar()) { try { if (await APP.guardarPreset(tipo, nombre, hex)) toast(`«${nombre}» guardado en tus predeterminados`); } catch (e) { console.error(e); } }
         pintar(); aviso();
       };
-      host.querySelector('[data-addd]').addEventListener('click', () => nuevo('diseno', '[data-nd]'));
+      const ad = host.querySelector('[data-addd]'); if (ad) ad.addEventListener('click', () => nuevo('diseno', '[data-nd]'));
       host.querySelector('[data-addt]').addEventListener('click', () => nuevo('color', '[data-nt]'));
-      host.querySelector('[data-nd]').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nuevo('diseno', '[data-nd]'); } });
+      const nd = host.querySelector('[data-nd]'); if (nd) nd.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nuevo('diseno', '[data-nd]'); } });
       host.querySelector('[data-nt]').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nuevo('color', '[data-nt]'); } });
       host.querySelector('[data-hc]').addEventListener('input', (e) => { e.target.dataset.tocado = '1'; e.target.nextElementSibling.style.background = e.target.value; });
       host.querySelectorAll('.lote-fila[data-k]').forEach((fila) => {
@@ -342,8 +345,8 @@
       let dSel = '', tSel = [], hSel = [];
       const disUsados = [...new Set(p.colores.map((c) => c.diseno).filter(Boolean))];
       const m = openModal({ title: 'Opción nueva', body: `<p class="muted small">${esc(p.nombre)} · elige un diseño, un color o los dos</p>
-        <div class="stack-sm"><b class="small">Diseño</b><div class="chips" style="flex-wrap:wrap;overflow:visible">${[...new Set([...disUsados, ...APP.presetsDiseno()])].map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join('')}</div>
-          <input class="input" id="onD" maxlength="30" placeholder="O escribe otro diseño"></div>
+        ${API._variantes === false ? '' : '<div class="stack-sm"><b class="small">Diseño</b>'}<div class="chips" style="flex-wrap:wrap;overflow:visible" ${API._variantes === false ? 'hidden' : ''}>${[...new Set([...disUsados, ...APP.presetsDiseno()])].map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join('')}</div>
+          <input class="input" id="onD" maxlength="30" placeholder="O escribe otro diseño" ${API._variantes === false ? 'hidden' : ''}>${API._variantes === false ? '' : '</div>'}
         <div class="stack-sm"><b class="small">Color <span class="muted" style="font-weight:600">· toca varios si lleva más de uno</span></b><div class="chips" style="flex-wrap:wrap;overflow:visible">${APP.presetsColor().map(([n, h]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" aria-pressed="false">${APP.dot(n, h)}${esc(n)}</button>`).join('')}</div>
           <input class="input" id="onT" maxlength="30" placeholder="O escribe otro color"></div>`,
         footer: '<button type="button" class="btn secondary" data-no>Cancelar</button><button type="button" class="btn" data-ok>Agregar</button>' });

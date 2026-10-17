@@ -84,6 +84,7 @@
         // Si aún no se corrió migracion_colores.sql, se pide sin colores para que nada se rompa
         let rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden), producto_colores(*)').order('nombre').limit(5000);
         this._colores = !rows.error;
+        if (this._colores && this._variantes === undefined) this._variantes = !(await sb.from('producto_colores').select('diseno').limit(1)).error;
         if (rows.error) rows = await sb.from('productos').select('*, categorias(nombre), fotos_producto(url_foto, orden)').order('nombre').limit(5000);
         const arr = ok(rows); if (arr.length) this._campanas = ('archivado' in arr[0]);
         return arr.map(normProd);
@@ -103,6 +104,7 @@
         codigo_tupperware: (p.codigo_tupperware || '').trim() || null
       };
       const colores = p.usa_colores ? (p.colores || []).filter((c) => (c.color || '').trim()) : [];
+      if (this._variantes === false && colores.some((c) => c.diseno)) throw new Error('FALTA_SQL_DISENOS');
       if (this._colores) {
         row.usa_colores = !!p.usa_colores && colores.length > 0;
         row.avisar_stock = p.avisar_stock !== false;
