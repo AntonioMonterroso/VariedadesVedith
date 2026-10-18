@@ -61,7 +61,7 @@
         </div>
         <div class="actions">
           <a class="action" href="#/vender"><span class="ic">${icon('bag', 'lg')}</span>Vender</a>
-          <a class="action" href="#/ingreso"><span class="ic">${icon('plus', 'lg')}</span>Ingreso rápido</a>
+          <a class="action" href="#/ingreso"><span class="ic">${icon('plus', 'lg')}</span>Recibí mercadería</a>
           <a class="action" href="#/cajas"><span class="ic">${icon('box', 'lg')}</span>Cajas</a>
           <a class="action" href="#/etiquetas"><span class="ic">${icon('printer', 'lg')}</span>Imprimir etiquetas</a>
         </div>
@@ -94,14 +94,14 @@
     const cats = APP.categorias;
     main.innerHTML = `
       <div class="page-head"><div><h1>${ad ? 'Productos' : 'Catálogo'}</h1><p class="sub" id="pCount"></p></div>
-        ${ad ? `<div class="row wrap"><a class="btn secondary" href="#/ingreso">${icon('package')} Ingreso rápido</a><button type="button" class="btn" id="pNuevo">${icon('plus')} Producto</button></div>` : ''}</div>
+        ${ad ? `<div class="row wrap"><a class="btn secondary" href="#/ingreso">${icon('package')} Recibí mercadería</a><button type="button" class="btn" id="pNuevo">${icon('plus')} Producto</button></div>` : ''}</div>
       <div class="toolbar">
         <div class="searchbox">${icon('search')}<input class="input" id="pQ" type="search" placeholder="Buscar por nombre o código…" autocomplete="off" value="${esc(F.q)}"></div>
         <div class="chips" id="pCats" role="group" aria-label="Categorías">
           <button type="button" class="chip" data-cat="" aria-pressed="${!F.cat}">Todo</button>
           ${cats.map((c) => `<button type="button" class="chip" data-cat="${esc(c.id)}" aria-pressed="${F.cat === c.id}">${esc(c.nombre)}</button>`).join('')}
         </div>
-        ${ad ? '<div class="chips" id="pCamp" role="group" aria-label="Campañas"></div><div id="pCampBar"></div>' : ''}
+        ${ad ? '<div class="chips" id="pCamp" role="group" aria-label="Tandas"></div><div id="pCampBar"></div>' : ''}
         ${ad ? `<div class="chips" id="pFil" role="group" aria-label="Filtros">
           <button type="button" class="chip" data-f="stock" aria-pressed="${F.f === 'stock'}">${icon('alert', 'sm')} Poco stock</button>
           <button type="button" class="chip" data-f="etiq" aria-pressed="${F.f === 'etiq'}">${icon('qr', 'sm')} Sin etiqueta</button>
@@ -115,20 +115,20 @@
       const box = main.querySelector('#pCamp'), bar = main.querySelector('#pCampBar'); if (!box) return;
       const cs = {}; APP.productos.forEach((p) => { if (p.campana) cs[p.campana] = (cs[p.campana] || 0) + 1; });
       const n = APP.archivados.length;
-      box.innerHTML = (Object.keys(cs).length || n) ? `<button type="button" class="chip" data-camp="" aria-pressed="${!F.camp}">Todas las campañas</button>`
+      box.innerHTML = (Object.keys(cs).length || n) ? `<button type="button" class="chip" data-camp="" aria-pressed="${!F.camp}">Todas las tandas</button>`
         + Object.entries(cs).map(([c, k]) => `<button type="button" class="chip" data-camp="${esc(c)}" aria-pressed="${F.camp === c}">${esc(c)} · ${k}</button>`).join('')
         + (n ? `<button type="button" class="chip" data-camp="__arch" aria-pressed="${F.camp === '__arch'}">${icon('box', 'sm')} Archivados · ${n}</button>` : '') : '';
       const agot = APP.productos.filter((p) => p.activo && p.cantidad === 0 && p.agotado_desde && !p.conservar);
       const enCamp = F.camp && F.camp !== '__arch' ? APP.productos.filter((p) => p.campana === F.camp) : [];
       bar.innerHTML = `<div class="row wrap" style="margin-top:6px">
-        ${enCamp.length ? `<button type="button" class="btn secondary sm" data-archcamp>${icon('box', 'sm')} Archivar esta campaña (${enCamp.length} productos · ${enCamp.reduce((s, p) => s + p.cantidad, 0)} piezas)</button>` : ''}
+        ${enCamp.length ? `<button type="button" class="btn secondary sm" data-archcamp>${icon('box', 'sm')} Archivar esta tanda (${enCamp.length} productos · ${enCamp.reduce((s, p) => s + p.cantidad, 0)} piezas)</button>` : ''}
         ${agot.length ? `<button type="button" class="btn ghost sm" data-agot>Archivar ${agot.length} ${agot.length === 1 ? 'agotado' : 'agotados'} ahora</button>` : ''}</div>`;
       box.querySelectorAll('[data-camp]').forEach((b) => b.addEventListener('click', () => { F.camp = b.dataset.camp; paint(); }));
       const deshacer = (ids, msg) => toast(msg, { ms: 15000, action: { label: 'Deshacer', fn: async () => { try { await API.restaurarProductos(ids); await APP.refreshCore(); toast('Productos restaurados'); paint(); } catch (e) { APP.handleErr(e); } } } });
       const ac = bar.querySelector('[data-archcamp]');
       if (ac) ac.addEventListener('click', () => {
         const sinP = enCamp.filter((p) => p.cantidad === 0), conP = enCamp.filter((p) => p.cantidad > 0), piezas = conP.reduce((s, p) => s + p.cantidad, 0);
-        const m = openModal({ title: 'Archivar campaña', body: `<p>«${esc(F.camp)}» tiene <b>${enCamp.length}</b> productos:</p>
+        const m = openModal({ title: 'Archivar tanda', body: `<p>«${esc(F.camp)}» tiene <b>${enCamp.length}</b> productos:</p>
           <div class="list"><div class="item"><span class="grow"><div class="t1">${sinP.length} ya agotados</div><div class="t2">Sin piezas: es lo más seguro de archivar.</div></span></div>
             <div class="item"><span class="grow"><div class="t1">${conP.length} con piezas todavía</div><div class="t2">${piezas} piezas sin vender</div></span></div></div>
           <p class="small muted">Lo archivado sale de la lista, del catálogo y del QR. Lo puedes <b>restaurar</b> durante ${diasBorrar()} días, y ahora mismo puedes tocar «Deshacer». Las ventas ya hechas no cambian.</p>`,

@@ -115,35 +115,38 @@
   /* ---------- estructura: barra superior, menú lateral, navegación inferior ---------- */
   function navItems() {
     return isAdmin() ? [
-      { id: 'inicio', label: 'Inicio', icon: 'home' },
-      { id: 'productos', label: 'Productos', icon: 'package' },
+      { id: 'inventario', label: 'Inventario', icon: 'package' },
       { id: 'vender', label: 'Vender', icon: 'bag', sell: true },
-      { id: 'ventas', label: 'Ventas', icon: 'receipt' }
+      { id: 'ingreso', label: 'Recibir', icon: 'plus' }
     ] : [
-      { id: 'productos', label: 'Catálogo', icon: 'package' },
+      { id: 'inventario', label: 'Inventario', icon: 'package' },
       { id: 'vender', label: 'Vender', icon: 'bag', sell: true },
       { id: 'mis-ventas', label: 'Mis ventas', icon: 'receipt' }
     ];
   }
+  // Menú «Más», en grupos con nombres sencillos
   function moreItems() {
     return isAdmin() ? [
-      { id: 'ingreso', label: 'Ingreso rápido', icon: 'plus' },
-      { id: 'cajas', label: 'Cajas (pedidos)', icon: 'box' },
-      { id: 'dinero', label: 'Dinero y depósitos', icon: 'wallet' },
+      { g: 'Mi día', id: 'inicio', label: 'Resumen del día', icon: 'home' },
+      { id: 'ventas', label: 'Ventas', icon: 'receipt' },
       { id: 'cobrar', label: 'Por cobrar', icon: 'users' },
-      { id: 'reportes', label: 'Reportes', icon: 'chart' },
-      { id: 'gastos', label: 'Gastos', icon: 'wallet' },
+      { g: 'Mercadería', id: 'productos', label: 'Administrar productos', icon: 'package' },
+      { id: 'cajas', label: 'Cajas (pedidos)', icon: 'box' },
+      { id: 'pendientes', label: 'Falta foto o precio', icon: 'alert' },
       { id: 'etiquetas', label: 'Imprimir etiquetas QR', icon: 'printer' },
-      { id: 'catalogos', label: 'Catálogos (librito)', icon: 'book' },
-      { id: 'dulces', label: 'Dulces (privado)', icon: 'lock' },
-      { id: 'pendientes', label: 'Pendientes de completar', icon: 'alert' },
+      { g: 'Dinero', id: 'dinero', label: 'Dinero y depósitos', icon: 'wallet' },
+      { id: 'gastos', label: 'Gastos', icon: 'wallet' },
+      { id: 'reportes', label: 'Reportes', icon: 'chart' },
+      { g: 'Compartir', id: 'catalogos', label: 'Catálogos (librito)', icon: 'book' },
       { id: 'estados', label: 'Imágenes para estados', icon: 'image' },
-      { id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
+      { g: 'Privado', id: 'dulces', label: 'Dulces (privado)', icon: 'lock' },
+      { g: 'Sistema', id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
       { id: 'ajustes', label: 'Ajustes', icon: 'sliders' }
     ] : [
       { id: 'estados', label: 'Imágenes para estados', icon: 'image' }
     ];
   }
+  const conGrupos = (items, fila) => items.map((n) => (n.g ? `<div class="grp-t">${esc(n.g)}</div>` : '') + fila(n)).join('');
 
   APP.buildShell = function () {
     const nav = navItems(), more = moreItems();
@@ -151,7 +154,7 @@
     document.getElementById('root').innerHTML = `
     <div id="app">
       <header class="topbar">
-        <a class="brand" href="#/${isAdmin() ? 'inicio' : 'productos'}" aria-label="Inicio">
+        <a class="brand" href="#/inventario" aria-label="Inicio">
           <img src="assets/logo-pequeno.png" alt="Vedith Variedades">
           <span class="b-text">Vedith<small>${esc(rolTxt)}</small></span>
         </a>
@@ -165,7 +168,7 @@
           <a class="btn sell-btn block" href="#/vender">${icon('bag')} Vender</a>
           ${nav.filter((n) => !n.sell).map((n) => `<a href="#/${n.id}" data-nav="${n.id}">${icon(n.icon)} ${esc(n.label)}</a>`).join('')}
           ${more.length ? '<div class="sep"></div>' : ''}
-          ${more.map((n) => `<a href="#/${n.id}" data-nav="${n.id}">${icon(n.icon)} ${esc(n.label)}</a>`).join('')}
+          ${conGrupos(more, (n) => `<a href="#/${n.id}" data-nav="${n.id}">${icon(n.icon)} ${esc(n.label)}</a>`)}
           <div class="sep"></div>
           <button type="button" class="nav-link" id="sideInstall" hidden>${icon('download')} Instalar app</button>
           <button type="button" class="nav-link" id="sideLogout">${icon('logout')} Salir</button>
@@ -195,7 +198,7 @@
     const m = openModal({
       title: 'Más opciones',
       body: `<div class="list">
-        ${more.map((n) => `<a class="item" href="#/${n.id}" data-go>${icon(n.icon)}<span class="grow t1">${esc(n.label)}</span>${icon('chevron', 'sm')}</a>`).join('')}
+        ${conGrupos(more, (n) => `<a class="item" href="#/${n.id}" data-go>${icon(n.icon)}<span class="grow t1">${esc(n.label)}</span>${icon('chevron', 'sm')}</a>`)}
         <button type="button" class="item" id="mAyuda">${icon('help')}<span class="grow t1">Cómo usar el panel</span>${icon('chevron', 'sm')}</button>
         <button type="button" class="item" id="mInstall" ${APP.installEvent ? '' : 'hidden'}>${icon('download')}<span class="grow t1">Instalar app en el teléfono</span>${icon('chevron', 'sm')}</button>
         <button type="button" class="item" id="mSalir">${icon('logout')}<span class="grow t1">Salir</span></button>
@@ -220,7 +223,7 @@
   APP.route = function () {
     const h = location.hash.replace(/^#\/?/, '');
     const [name, qs] = h.split('?');
-    const id = name || (isAdmin() ? 'inicio' : 'productos');
+    const id = name || 'inventario';
     return { id, params: new URLSearchParams(qs || '') };
   };
   APP.go = (id) => { location.hash = '#/' + id; };
@@ -228,9 +231,9 @@
     if (!APP.user) return;
     let { id, params } = APP.route();
     const adminOnly = ['inicio', 'ventas', 'ingreso', 'dulces', 'catalogos', 'pendientes', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'notificaciones', 'ajustes'];
-    if (!isAdmin() && adminOnly.includes(id)) id = 'productos';
+    if (!isAdmin() && (adminOnly.includes(id) || id === 'productos')) id = 'inventario';
     if (isAdmin() && id === 'mis-ventas') id = 'ventas';
-    const page = APP.pages[id] || APP.pages[isAdmin() ? 'inicio' : 'productos'];
+    const page = APP.pages[id] || APP.pages.inventario;
     APP.current = id;
     APP.$$('[data-nav]').forEach((a) => { if (a.dataset.nav === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     const main = APP.$('#main');
@@ -298,7 +301,7 @@
           ${ad ? `<dt>Código Tupperware</dt><dd>${p.codigo_tupperware ? esc(p.codigo_tupperware) : '<span class="faint">sin anotar</span>'}</dd>
           <dt>Costo</dt><dd class="num">${money(p.costo)}</dd>
           <dt>Ganancia por pieza</dt><dd class="num">${money(gan)}</dd>
-          <dt>Campaña</dt><dd>${p.campana ? esc(p.campana) : '<span class="faint">sin campaña</span>'}</dd>
+          <dt>Tanda</dt><dd>${p.campana ? esc(p.campana) : '<span class="faint">sin tanda</span>'}</dd>
           <dt>Aviso de poco stock</dt><dd>${p.avisar_stock === false ? 'Apagado' : 'Con ' + p.stock_minimo + ' o menos'}</dd>
           <dt>Etiqueta QR</dt><dd>${p.etiqueta_impresa_at ? `Impresa · ${U.fmtDate(p.etiqueta_impresa_at)}` : '<span class="pill warn">Sin imprimir</span>'}</dd>` : ''}
         </dl>
@@ -343,6 +346,7 @@
         await APP.refreshCore(); m.close(); if (parent) parent.close();
         toast(`Listo: ahora hay ${p.cantidad + q} de ${p.nombre}.`);
         if (APP.current === 'productos') APP.pages.productos.paint && APP.pages.productos.paint();
+        if (APP.current === 'inventario') APP.pages.inventario.paint && APP.pages.inventario.paint();
       } catch (e) { APP.handleErr(e); }
     });
   }
@@ -386,7 +390,7 @@
           <label class="field">Código Tupperware <span class="hint">Para volver a pedirlo. Solo lo ves tú; nunca sale en la ficha ni en el QR.</span>
             <input class="input" id="pfTup" value="${esc(p.codigo_tupperware || '')}" maxlength="40" placeholder="Ej.: 4581"></label>
         </div>
-        <label class="field">Campaña <span class="hint">La tanda a la que pertenece (ej.: Tupper Tips 11). Sirve para filtrar y archivar todo junto cuando termine.</span>
+        <label class="field">Tanda <span class="hint">La tanda a la que pertenece (ej.: Tupper Tips 11). Sirve para filtrar y archivar todo junto cuando termine.</span>
           <input class="input" id="pfCamp" list="pfCampList" value="${esc(p.campana || '')}" maxlength="60" placeholder="Ej.: Tupper Tips 11 · oct 2026" autocomplete="off"></label>
         <datalist id="pfCampList">${[...new Set(APP.productosTodos.map((x) => x.campana).filter(Boolean))].map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         <div class="grid-3">
@@ -438,6 +442,7 @@
         <div><input class="input" type="url" inputmode="url" placeholder="https://…" value="${esc(val)}" aria-label="Link de la foto"><div class="msg" hidden></div></div>
         <button type="button" class="icon-btn" aria-label="Quitar foto">${icon('x')}</button>`;
       const input = row.querySelector('input'), prev = row.querySelector('.prev'), msg = row.querySelector('.msg');
+      APP.agregarSubir(input);
       const check = U.debounce(() => {
         const raw = input.value.trim();
         msg.hidden = true; prev.classList.remove('bad'); prev.innerHTML = icon('image'); input.classList.remove('bad');

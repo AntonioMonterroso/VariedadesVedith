@@ -2,7 +2,7 @@
    1) Se abre una página del catálogo y se marca con un recuadro el texto de cada producto.
    2) La lectura (OCR) propone código, nombre y precio; se revisa y se agrega a la lista.
    3) Al importar, los productos nacen como BORRADOR: ocultos, sin precio de venta y sin foto.
-   4) En "Pendientes de completar" se les pone su precio y el enlace de su foto.
+   4) En "Falta foto o precio" se les pone su precio y el enlace de su foto.
    El precio del catálogo se guarda solo como referencia. No se sube ninguna foto. */
 (function () {
   'use strict';
@@ -50,7 +50,7 @@
             <div class="row between"><h3>Para importar <span class="pill pink" id="impCuenta">0</span></h3><button type="button" class="btn ghost sm" id="impVaciar">Vaciar</button></div>
             <div class="imp-items" id="impItems"></div>
             <button type="button" class="btn green block" id="impImportar" disabled>Importar productos</button>
-            <p class="xs muted">Quedan como borradores ocultos. Les pones tu precio y su foto en «Pendientes de completar».</p>
+            <p class="xs muted">Quedan como borradores ocultos. Les pones tu precio y su foto en «Falta foto o precio».</p>
           </aside>
         </div>
       </div>`;
@@ -194,7 +194,7 @@
       const todos = APP.pendientes();
       const lista = todos.filter((p) => filtro === 'todos' || (filtro === 'precio' && !(p.precio > 0)) || (filtro === 'foto' && !p.fotos.length));
       main.innerHTML = `
-        <div class="page-head"><div><h1>Pendientes de completar</h1><p class="sub">${todos.length ? `${todos.length} ${todos.length === 1 ? 'producto espera' : 'productos esperan'} su precio o su foto.` : 'Todo al día.'}</p></div></div>
+        <div class="page-head"><div><h1>Falta foto o precio</h1><p class="sub">${todos.length ? `${todos.length} ${todos.length === 1 ? 'producto espera' : 'productos esperan'} su precio o su foto.` : 'Todo al día.'}</p></div></div>
         <div class="chips" role="group" aria-label="Filtro">${[['todos', 'Todos'], ['precio', 'Falta precio'], ['foto', 'Falta foto']].map(([k, l]) => `<button type="button" class="chip" data-f="${k}" aria-pressed="${filtro === k}">${l}</button>`).join('')}</div>
         ${lista.length ? `<div class="stack">${lista.map(tarjeta).join('')}</div>` : `<div class="card empty">${icon('check', 'lg')}<p>${todos.length ? 'No hay productos con ese filtro.' : 'No hay productos pendientes. Los que importes del catálogo aparecen aquí hasta que tengan precio y foto.'}</p></div>`}`;
       main.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { filtro = b.dataset.f; paint(); }));

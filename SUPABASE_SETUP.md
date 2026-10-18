@@ -104,6 +104,13 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 2. En el editor del producto, cada diseño tiene su campo **Foto de este diseño**: pegas el link de la imagen (igual que las fotos del producto). La foto vale para todas las opciones de ese diseño.
 3. Se ve como miniatura al elegir la opción al vender, en la ficha del producto y en el QR público; al tocarla se amplía. También sale entre las fotos disponibles al crear una imagen para estados.
 
+## 14. Mi inventario, fotos subidas y medidor de espacio
+1. En el SQL Editor pega **todo** `migracion_fotos_storage.sql` y dale **Run**. Crea la carpeta `fotos` (pública para leer, solo la administración sube y borra) y la función que mide el espacio.
+2. **Mi inventario** es ahora la pantalla principal: cada producto con su foto, cuántas piezas hay y, debajo, **cuántas de cada estilo** (diseño con su foto, o color). La administración ve además lo que vale el inventario (a precio de venta, a costo y la ganancia posible) y puede **Corregir cantidades** con − / +. Los vendedores ven las cantidades pero no los costos ni pueden editar.
+3. **Subir foto**: en el formulario del producto y en la foto de cada diseño hay un botón para tomar o elegir una foto del teléfono. Se comprime sola (máx. 1000 px, unos 100 KB) y se guarda en Supabase. Pegar un link sigue funcionando.
+4. **Espacio**: en **Ajustes → Espacio de fotos** hay una barra con lo usado y lo que queda (fotos + catálogos; el plan gratis da 1 GB). Avisa desde el 80 % y no deja subir más al llegar al 98 %. **Liberar fotos sin usar** borra del almacenamiento las que ningún producto usa; al borrar un producto para siempre también se borran sus fotos.
+5. **Menú**: abajo quedan Inventario, Vender, Recibir y Más. Todo lo demás está en «Más», en grupos (Mi día, Mercadería, Dinero, Compartir, Privado, Sistema). «Ingreso rápido» ahora es **Recibí mercadería**, «Campaña» es **Tanda** y «Pendientes de completar» es **Falta foto o precio**.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

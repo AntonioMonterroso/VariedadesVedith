@@ -146,6 +146,23 @@
       db.productos = db.productos.filter((p) => !(p.archivado && Date.now() - new Date(p.archivado_at) >= dias * 86400000));
       save(); return { productos: antes - db.productos.length, avisos: 0, escaneos: 0, bitacora: 0 };
     },
+    async ajustarExistencia(productoId, colorId, n) {
+      admin(); n = Math.max(0, parseInt(n, 10) || 0);
+      const p = db.productos.find((x) => x.id === productoId); if (!p) return;
+      if (colorId) { const c = p.colores.find((k) => k.id === colorId); if (c) c.cantidad = n; p.cantidad = p.colores.reduce((s, k) => s + k.cantidad, 0); } else p.cantidad = n;
+      if (p.cantidad === 0 && !p.agotado_desde) p.agotado_desde = now(); else if (p.cantidad > 0) p.agotado_desde = null;
+      save();
+    },
+    async subirFoto(blob) {
+      admin();
+      return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error('ERROR')); r.readAsDataURL(blob); });
+    },
+    async usoAlmacenamiento() {
+      admin(); const len = (u) => (String(u || '').startsWith('data:') ? u.length * 0.75 : 0);
+      const fotos = db.productos.reduce((s, p) => s + (p.fotos || []).reduce((a, u) => a + len(u), 0) + (p.colores || []).reduce((a, c) => a + len(c.foto), 0), 0);
+      return delay({ fotos, catalogos: 18 * 1048576, total: fotos + 18 * 1048576 });
+    },
+    async limpiarFotos() { admin(); return delay(0); },
     async deleteProducto(id) { admin(); db.productos = db.productos.filter((p) => p.id !== id); save(); },
     async setEtiquetaImpresa(ids, impresa) { admin(); db.productos.forEach((p) => { if (ids.includes(p.id)) p.etiqueta_impresa_at = impresa ? now() : null; }); save(); },
 

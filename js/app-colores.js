@@ -1,10 +1,10 @@
-/* Variantes por producto (colores y/o diseños), stock por variante e INGRESO RÁPIDO.
+/* Estilos por producto (colores y/o diseños), stock por variante e INGRESO RÁPIDO.
    - Una variante puede ser un color ("Rosa"), un diseño ("Capibara") o los dos ("Capibara · Rosa").
      Cada una lleva su propia existencia.
    - Los colores y diseños "predeterminados" se pueden ampliar (Ajustes y al agregar uno nuevo).
    - Cada producto puede apagar el aviso de "se acabó / queda poco" (y entonces se puede vender
      aunque ya no haya: la existencia nunca baja de 0).
-   - Ingreso rápido: sumar piezas a varios productos y variantes de una sola vez. */
+   - Recibí mercadería: sumar piezas a varios productos y variantes de una sola vez. */
 (function () {
   'use strict';
   const { icon, esc, toast, openModal } = U;
@@ -223,6 +223,7 @@
         bl.querySelector('[data-addcol]').addEventListener('click', () => selectorColores(d ? `Colores de «${d}»` : 'Colores sueltos', d, g, qty, () => { pintar(); aviso(); }));
         const fu = bl.querySelector('[data-furl]');
         if (fu) {
+          APP.agregarSubir(fu);
           const prev = bl.querySelector('[data-prev]'), msg = bl.querySelector('[data-fmsg]');
           fu.addEventListener('input', U.debounce(() => {
             const raw = fu.value.trim(); msg.hidden = true; fu.classList.remove('bad');
@@ -346,11 +347,11 @@
 
     function pintar() {
       main.innerHTML = `
-        <div class="page-head"><div><h1>Ingreso rápido</h1><p class="sub">Suma piezas a varios productos de una sola vez.</p></div>
-          <button type="button" class="btn secondary" id="irNuevo">${icon('plus')} Producto rápido</button></div>
+        <div class="page-head"><div><h1>Recibí mercadería</h1><p class="sub"><b>1.</b> Busca lo que llegó (o márcalo como nuevo). <b>2.</b> Pon cuántas piezas de cada estilo. <b>3.</b> Guarda.</p></div>
+          <button type="button" class="btn secondary" id="irNuevo">${icon('plus')} Es un producto nuevo</button></div>
         ${faltaSql ? `<div class="banner">${icon('alert')}<span class="small">Para usar colores y diseños falta correr <b>migracion_colores.sql</b> en Supabase. Mientras tanto el ingreso funciona sin ellos.</span></div>` : ''}
         <div class="row" style="margin:12px 0">
-          <div class="searchbox grow">${icon('search')}<input class="input" id="irQ" type="search" placeholder="Busca un producto para sumarle piezas…" autocomplete="off"></div>
+          <div class="searchbox grow">${icon('search')}<input class="input" id="irQ" type="search" placeholder="¿Qué llegó? Escribe el nombre o el código…" autocomplete="off"></div>
           <button type="button" class="icon-btn" id="irScan" aria-label="Escanear QR" style="border:1.5px solid var(--line-strong);border-radius:14px;width:52px;height:52px">${icon('scan')}</button>
         </div>
         <div id="irRes" class="pick-list" hidden></div>

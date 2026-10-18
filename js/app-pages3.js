@@ -147,7 +147,7 @@
     const m = openModal({
       title: nueva ? 'Caja nueva' : 'Editar caja', wide: true,
       body: `<div class="stack">
-        <label class="field">Nombre de la caja *<input class="input" id="cjNombre" value="${esc(c.nombre)}" maxlength="80" placeholder="Ej.: Caja 14 · Campaña 9" autofocus></label>
+        <label class="field">Nombre de la caja *<input class="input" id="cjNombre" value="${esc(c.nombre)}" maxlength="80" placeholder="Ej.: Caja 14 · Tanda 9" autofocus></label>
         <div class="grid-2">
           <label class="field">Número de pedido de Tupperware<input class="input" id="cjPed" value="${esc(c.numero_pedido || '')}" maxlength="40"></label>
           <label class="field">Fecha del pedido<input class="input" id="cjFecha" type="date" value="${esc(c.fecha_pedido)}"></label>

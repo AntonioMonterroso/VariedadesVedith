@@ -6,6 +6,7 @@
     search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
     minus: '<path d="M5 12h14"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
@@ -83,7 +84,7 @@
     if (/dropbox\.com/.test(u)) u = u.replace(/[?&]dl=0/, '').replace(/([?&])dl=1/, '$1raw=1') + (/[?&]raw=1/.test(u) ? '' : (u.includes('?') ? '&raw=1' : '?raw=1'));
     return u;
   }
-  const validUrl = (u) => /^https?:\/\/[^\s]+\.[^\s]+/i.test(String(u || '').trim());
+  const validUrl = (u) => /^https?:\/\/[^\s]+\.[^\s]+/i.test(String(u || '').trim()) || (!!window.API && window.API.mode === 'demo' && /^data:image\//.test(String(u || '')));
 
   /* Imagen con imagen de reemplazo si el link falla */
   function imgTag(url, alt = '', cls = '') {

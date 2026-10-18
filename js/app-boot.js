@@ -101,6 +101,7 @@
         if (!document.querySelector('.overlay')) {
           if (APP.current === 'productos' && APP.pages.productos.paint && document.activeElement.tagName !== 'INPUT') APP.pages.productos.paint();
           if (APP.current === 'inicio' || APP.current === 'notificaciones') APP.render();
+          if (APP.current === 'inventario' && !document.querySelector('.inv-edit') && document.activeElement.tagName !== 'INPUT' && APP.pages.inventario.paint) APP.pages.inventario.paint();
         }
       } catch (_) {}
     }, 45000);

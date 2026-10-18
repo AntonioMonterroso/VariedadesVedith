@@ -853,3 +853,41 @@ input, select, textarea { font-size: max(16px, 1rem); } /* iOS hace zoom automá
 /* Foto de cada diseño */
 .var-th { display: inline-block; width: 30px; height: 30px; border-radius: 8px; overflow: hidden; flex: none; cursor: zoom-in; background: var(--surface-2); vertical-align: middle; }
 .var-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ===== Mi inventario ===== */
+.inv-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .inv-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1180px) { .inv-grid { grid-template-columns: repeat(3, 1fr); } }
+.inv-card { padding: 14px; display: grid; gap: 10px; align-content: start; animation: pageIn 420ms var(--ease-out) both; }
+.inv-card.is-agot { opacity: .8; }
+.inv-head { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; }
+.inv-head:active { transform: scale(0.99); }
+.inv-foto { width: 76px; height: 76px; border-radius: 16px; overflow: hidden; background: var(--surface-2); flex: none; display: grid; place-items: center; border: 1px solid var(--line); }
+.inv-foto img { width: 100%; height: 100%; object-fit: cover; }
+.inv-nm { display: block; font-weight: 800; font-size: 1.05rem; line-height: 1.25; overflow-wrap: anywhere; }
+.inv-sub { display: block; color: var(--ink-3); font-size: .85rem; margin-top: 2px; }
+.inv-tot { display: grid; justify-items: center; min-width: 64px; padding: 8px 10px; border-radius: 16px; background: var(--surface-2); }
+.inv-tot b { font-size: 1.7rem; line-height: 1; }
+.inv-tot small { font-size: .72rem; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+.inv-tot.poco { background: rgba(224,162,26,.18); } .inv-tot.agotado { background: rgba(211,64,64,.18); color: #d34040; }
+.est-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.est-tile { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.est-tile.cero { border-color: rgba(211,64,64,.45); background: rgba(211,64,64,.08); }
+.est-tile.cero .et-q { color: #d34040; }
+.et-img { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; flex: none; cursor: pointer; }
+.et-img img { width: 100%; height: 100%; object-fit: cover; }
+.et-img.et-dot, .et-img.et-ph { cursor: default; }
+.et-t { display: grid; line-height: 1.15; }
+.et-n { font-size: .82rem; font-weight: 700; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.et-q { font-size: 1.05rem; font-weight: 800; }
+.inv-toggle { justify-self: start; }
+.inv-edit { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.grp-t { margin: 12px 4px 2px; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.side .grp-t { padding-left: 12px; }
+
+/* ===== Medidor de espacio ===== */
+.meter { display: grid; gap: 8px; }
+.meter-bar { height: 12px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
+.meter-bar i { display: block; height: 100%; border-radius: 999px; transition: width 600ms var(--ease-out); background: #2e9e5b; }
+.meter-bar i.warn { background: #e0a21a; } .meter-bar i.bad { background: #d34040; }
+@media (prefers-reduced-motion: reduce) { .inv-card { animation: none; } }

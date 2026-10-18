@@ -42,6 +42,10 @@
       .map((c) => ({ id: c.id, color: c.color, diseno: c.diseno || '', tono: c.tono || '', hexes: c.hexes || '', foto: c.foto_url || c.foto || '', hex: c.hex || '', cantidad: c.cantidad == null ? null : Number(c.cantidad), disponible: c.disponible }))
   });
 
+  const BUCKET_FOTOS = 'fotos';
+  // ruta dentro del bucket si el link es de una foto subida desde el panel
+  const rutaFoto = (u) => { const m = String(u || '').match(/\/storage\/v1\/object\/public\/fotos\/(.+?)(?:\?.*)?$/); return m ? decodeURIComponent(m[1]) : ''; };
+
   window.API = {
     mode: 'supabase',
 
@@ -148,7 +152,48 @@
       if (solo) q = q.eq('cantidad', 0);
       return ok(await q.select('id')).map((r) => r.id);
     },
-    async borrarProductos(ids) { if (ids.length) ok(await sb.from('productos').delete().in('id', ids)); },
+    async borrarProductos(ids) {
+      if (!ids.length) return;
+      // también se borran sus fotos subidas al almacenamiento, para no llenar el espacio
+      const rutas = [];
+      try {
+        const f = ok(await sb.from('fotos_producto').select('url_foto').in('producto_id', ids));
+        const c = this._fotosDis ? ok(await sb.from('producto_colores').select('foto_url').in('producto_id', ids)) : [];
+        [...f.map((x) => x.url_foto), ...c.map((x) => x.foto_url)].forEach((u) => { const r = rutaFoto(u); if (r) rutas.push(r); });
+      } catch (_) {}
+      ok(await sb.from('productos').delete().in('id', ids));
+      if (rutas.length) { try { await sb.storage.from(BUCKET_FOTOS).remove([...new Set(rutas)]); } catch (_) {} }
+    },
+
+    /* ---- existencias, fotos subidas y espacio ---- */
+    // Pone la cantidad exacta de un estilo (colorId) o del producto entero (sin colores)
+    async ajustarExistencia(productoId, colorId, n) {
+      n = Math.max(0, parseInt(n, 10) || 0);
+      if (colorId) ok(await sb.from('producto_colores').update({ cantidad: n }).eq('id', colorId));
+      else ok(await sb.from('productos').update({ cantidad: n }).eq('id', productoId));
+    },
+    async subirFoto(blob) {
+      const ruta = `p/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const { error } = await sb.storage.from(BUCKET_FOTOS).upload(ruta, blob, { contentType: 'image/jpeg', cacheControl: '31536000' });
+      if (error) { if (/bucket|not found/i.test(error.message || '')) throw new Error('FALTA_SQL_FOTOS'); fail(error); }
+      return sb.storage.from(BUCKET_FOTOS).getPublicUrl(ruta).data.publicUrl;
+    },
+    async usoAlmacenamiento() {
+      const r = await sb.rpc('uso_almacenamiento');
+      if (r.error) { if (/uso_almacenamiento|function/i.test(r.error.message || '')) throw new Error('FALTA_SQL_FOTOS'); fail(r.error); }
+      return r.data;   // { fotos, catalogos, total } en bytes
+    },
+    // Quita del almacenamiento las fotos que ya ningún producto usa
+    async limpiarFotos() {
+      const usadas = new Set();
+      ok(await sb.from('fotos_producto').select('url_foto')).forEach((x) => { const r = rutaFoto(x.url_foto); if (r) usadas.add(r); });
+      if (this._fotosDis) ok(await sb.from('producto_colores').select('foto_url')).forEach((x) => { const r = rutaFoto(x.foto_url); if (r) usadas.add(r); });
+      const { data, error } = await sb.storage.from(BUCKET_FOTOS).list('p', { limit: 5000 });
+      if (error) fail(error);
+      const sobran = (data || []).filter((o) => o.name && !usadas.has('p/' + o.name) && Date.now() - new Date(o.created_at || 0) > 3600000).map((o) => 'p/' + o.name);
+      for (let i = 0; i < sobran.length; i += 100) { const r = await sb.storage.from(BUCKET_FOTOS).remove(sobran.slice(i, i + 100)); if (r.error) fail(r.error); }
+      return sobran.length;
+    },
     async archivarAgotadosAhora() { return ok(await sb.rpc('fn_archivar_agotados', {})); },
     async depurarAhora() { return ok(await sb.rpc('fn_depurar', {})); },
     async deleteProducto(id) { ok(await sb.from('productos').delete().eq('id', id)); },
