@@ -94,7 +94,7 @@
   };
 
   /* ---------- Mi inventario ---------- */
-  const INV = { q: '', f: '', camp: '', abiertos: new Set() };
+  const INV = { q: '', f: '', camp: '', abiertos: new Set(), vista: U.lsGet('vedith-vista', 'grid') };
 
   // Estilos de un producto: por diseño (con su foto) o por color
   function estilos(p) {
@@ -134,13 +134,20 @@
       ${filas}
     </section>`;
   }
+  // Cuadrícula: foto cuadrada, número de piezas encima, nombre y precio
+  function tile(p) {
+    const est = APP.stockEstado(p), es = estilos(p);
+    return `<button type="button" class="itile ${est}" data-pid="${esc(p.id)}" aria-label="${esc(p.nombre)}, tengo ${p.cantidad}">
+      <span class="it-foto">${fotoDe(p) ? U.imgTag(fotoDe(p), '') : U.placeholder('Sin foto')}<b class="it-n num">${p.cantidad}</b></span>
+      <span class="it-nm">${esc(p.nombre)}</span><span class="it-sub">${money(p.precio)}${es.length > 1 ? ` · ${es.length} estilos` : ''}</span></button>`;
+  }
   const stepper = (n) => `<div class="stepper" role="group" aria-label="Piezas"><button type="button" data-minus aria-label="Menos">${icon('minus')}</button><input type="number" inputmode="numeric" min="0" value="${Number(n) || 0}" data-cant aria-label="Piezas"><button type="button" data-plus aria-label="Más">${icon('plus')}</button></div>`;
 
   P.inventario = async function (main) {
     const ad = isAdmin();
     main.innerHTML = `
       <div class="page-head"><div><h1>Mi inventario</h1><p class="sub" id="invSub"></p></div>
-        ${ad ? `<div class="row wrap"><a class="btn" href="#/ingreso">${icon('plus')} Recibí mercadería</a></div>` : ''}</div>
+        ${ad ? `<div class="row inv-btns"><button type="button" class="btn secondary" id="invNuevo">${icon('plus')} Nuevo</button><a class="btn" href="#/ingreso">${icon('package')} Recibí mercadería</a></div>` : ''}</div>
       <div id="invKpi"></div><div id="invAviso"></div>
       <div class="toolbar">
         <div class="searchbox">${icon('search')}<input class="input" id="invQ" type="search" placeholder="Buscar por nombre o código…" autocomplete="off" value="${esc(INV.q)}"></div>
@@ -150,6 +157,7 @@
           <button type="button" class="chip" data-f="agot" aria-pressed="${INV.f === 'agot'}">Agotados</button>
         </div>
         ${ad ? '<div class="chips" id="invC" role="group" aria-label="Tanda"></div>' : ''}
+        <div class="seg vista-seg" id="invV" role="group" aria-label="Forma de ver"><button type="button" data-v="grid" aria-pressed="${INV.vista === 'grid'}">${icon('grid', 'sm')} Cuadrícula</button><button type="button" data-v="list" aria-pressed="${INV.vista === 'list'}">${icon('list', 'sm')} Detalle</button></div>
       </div>
       <div id="invGrid" class="inv-grid"></div>`;
 
@@ -161,11 +169,12 @@
       const vivos = l.filter((p) => p.activo), conCosto = vivos.filter((p) => p.costo != null && p.costo > 0);
       const aCosto = conCosto.reduce((s, p) => s + p.cantidad * p.costo, 0), aVenta = vivos.reduce((s, p) => s + p.cantidad * p.precio, 0);
       const aVentaCosto = conCosto.reduce((s, p) => s + p.cantidad * p.precio, 0);
-      main.querySelector('#invKpi').innerHTML = `<div class="kpis">
+      const abierto = main.querySelector('#invKpi details') ? main.querySelector('#invKpi details').open : innerWidth >= 640;
+      main.querySelector('#invKpi').innerHTML = `<details class="kpi-det" ${abierto ? 'open' : ''}><summary>Cuánto vale mi inventario</summary><div class="kpis">
         <div class="kpi"><span class="k-l">Piezas que tengo</span><span class="k-v num">${piezas}</span><span class="small muted">${vivos.length} productos a la venta</span></div>
         <div class="kpi green"><span class="k-l">Vale si lo vendo todo</span><span class="k-v num">${money(aVenta)}</span><span class="small muted">a precio de venta</span></div>
         <div class="kpi orange"><span class="k-l">Me costó</span><span class="k-v num">${money(aCosto)}</span><span class="small muted">${conCosto.length < vivos.length ? `${vivos.length - conCosto.length} sin costo anotado` : 'todo con costo'}</span></div>
-        <div class="kpi pink"><span class="k-l">Ganancia posible</span><span class="k-v num">${money(aVentaCosto - aCosto)}</span><span class="small muted">solo con costo anotado</span></div></div>`;
+        <div class="kpi pink"><span class="k-l">Ganancia posible</span><span class="k-v num">${money(aVentaCosto - aCosto)}</span><span class="small muted">solo con costo anotado</span></div></div></details>`;
     };
     const pintarTandas = () => {
       const box = main.querySelector('#invC'); if (!box) return;
@@ -181,11 +190,21 @@
       else if (!INV.q) l = l.filter((p) => p.activo || (ad && p.cantidad > 0));
       const grid = main.querySelector('#invGrid'); if (!grid) return;
       kpis();
-      grid.innerHTML = l.length ? l.map(tarjeta).join('') : `<div class="card empty" style="grid-column:1/-1"><img src="assets/logo-pequeno.png" alt=""><p>${APP.productos.length ? 'No encontré productos con eso.' : ad ? 'Aún no hay productos. Toca «Recibí mercadería» para empezar.' : 'Todavía no hay productos.'}</p></div>`;
+      grid.className = INV.vista === 'grid' ? 'inv-grid3' : 'inv-grid';
+      grid.innerHTML = l.length && INV.vista === 'grid' ? l.map(tile).join('') : l.length ? l.map(tarjeta).join('') : `<div class="card empty" style="grid-column:1/-1"><img src="assets/logo-pequeno.png" alt=""><p>${APP.productos.length ? 'No encontré productos con eso.' : ad ? 'Aún no hay productos. Toca «Recibí mercadería» para empezar.' : 'Todavía no hay productos.'}</p></div>`;
       grid.querySelectorAll('.inv-card').forEach(enlazar);
+      grid.querySelectorAll('.itile').forEach((b) => b.addEventListener('click', () => detalle(APP.prod(b.dataset.pid))));
       APP.bindVarFotos(grid);
       grid.querySelectorAll('.et-img[data-foto]').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); APP.lightbox([el.dataset.foto], 0); }));
     };
+    // En la cuadrícula, al tocar un producto se abre su detalle con los estilos y sus cantidades
+    function detalle(p) {
+      if (ad) INV.abiertos.add(p.id);
+      const m = U.openModal({ title: p.nombre, wide: true, body: tarjeta(p), onClose: () => { INV.abiertos.delete(p.id); paint(); } });
+      const card = m.body.querySelector('.inv-card'); enlazar(card); APP.bindVarFotos(card);
+      const t = card.querySelector('[data-toggle]'); if (t) t.remove();
+      card.querySelectorAll('[data-ficha]').forEach((b) => b.addEventListener('click', () => { m.close(); APP.openFicha(p); }));
+    }
     function enlazar(card) {
       const p = APP.prod(card.dataset.pid);
       card.querySelectorAll('[data-ficha]').forEach((b) => b.addEventListener('click', () => APP.openFicha(p)));
@@ -216,6 +235,8 @@
       });
     }
     P.inventario.paint = paint;
+    main.querySelectorAll('#invV [data-v]').forEach((b) => b.addEventListener('click', () => { INV.vista = b.dataset.v; U.lsSet('vedith-vista', INV.vista); main.querySelectorAll('#invV button').forEach((x) => x.setAttribute('aria-pressed', x === b)); paint(); }));
+    const nv = main.querySelector('#invNuevo'); if (nv) nv.addEventListener('click', () => APP.productoRapido());
     pintarTandas(); paint();
     main.querySelector('#invQ').addEventListener('input', U.debounce((e) => { INV.q = e.target.value; paint(); }, 120));
     main.querySelectorAll('#invF [data-f]').forEach((b) => b.addEventListener('click', () => { INV.f = b.dataset.f; main.querySelectorAll('#invF .chip').forEach((x) => x.setAttribute('aria-pressed', x === b)); paint(); }));

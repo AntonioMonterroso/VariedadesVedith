@@ -265,38 +265,78 @@
   /* =====================================================================
      PRODUCTO RÁPIDO: nombre, precio y existencia (o variantes) y listo
      ===================================================================== */
+  /* Producto nuevo en 3 pasos: 1 qué es y su foto · 2 cuánto cuesta · 3 cuántos hay (por estilo si tiene) */
   APP.productoRapido = function (opts = {}) {
-    let ed = null;
-    const m = openModal({
-      title: 'Producto rápido', wide: true,
-      body: `<div class="stack">
-        <label class="field">Nombre *<input class="input" id="prNombre" value="${esc(opts.nombre || '')}" maxlength="120" placeholder="Ej.: Botella EcoTwist 750 ml" autofocus></label>
-        <div class="grid-2"><label class="field">Precio de venta *<input class="input" id="prPrecio" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></label>
-          <label class="field">Costo <span class="hint">opcional</span><input class="input" id="prCosto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></label></div>
-        <label class="row"><input type="checkbox" id="prCol" style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Viene en varios colores o diseños</b></span></label>
-        <div id="prSin"><label class="field">¿Cuántas piezas hay?<input class="input" id="prCant" type="number" inputmode="numeric" min="0" value="1"></label></div>
-        <div id="prConColor" hidden></div></div>`,
-      footer: '<button type="button" class="btn secondary" data-no>Cancelar</button><button type="button" class="btn" data-ok>Crear producto</button>'
-    });
-    const g = (s) => m.body.querySelector(s);
-    g('#prCol').addEventListener('change', (e) => {
-      g('#prSin').hidden = e.target.checked; g('#prConColor').hidden = !e.target.checked;
-      if (e.target.checked && !ed) ed = APP.editorColores(g('#prConColor'), []);
-    });
-    m.foot.querySelector('[data-no]').addEventListener('click', () => m.close());
-    m.foot.querySelector('[data-ok]').addEventListener('click', async () => {
-      const nombre = g('#prNombre').value.trim(), precio = g('#prPrecio').value;
-      if (!nombre) { g('#prNombre').focus(); return toast('Falta el nombre.', { error: true }); }
-      if (precio === '' || Number(precio) < 0) { g('#prPrecio').focus(); return toast('Falta el precio de venta.', { error: true }); }
-      const usa = g('#prCol').checked; let colores = [];
-      if (usa) { colores = ed.get().colores; if (!colores.length) return toast('Elige al menos un diseño o un color.', { error: true }); }
-      const btn = m.foot.querySelector('[data-ok]'); btn.disabled = true;
+    const st = { nombre: opts.nombre || '', foto: '', cat: '', precio: '', costo: '', usa: false, cant: 1, tanda: U.lsGet('vedith-campana', '') };
+    let paso = 1, ed = null;
+    const m = openModal({ title: 'Producto nuevo', wide: true, body: '<div id="pnBox" class="stack"></div>', footer: ' ' });
+    const box = m.body.querySelector('#pnBox');
+    const puntos = () => `<div class="steps" aria-label="Paso ${paso} de 3">${[1, 2, 3].map((n) => `<span class="${n === paso ? 'on' : n < paso ? 'done' : ''}"><b>${n < paso ? '✓' : n}</b>${['Qué es', 'Precio', 'Cuántos'][n - 1]}</span>`).join('')}</div>`;
+    const guardarCampos = () => {
+      const g = (q) => box.querySelector(q);
+      if (paso === 1) { st.nombre = g('#pnNombre').value.trim(); st.foto = U.imageUrl(g('#pnFoto').value); st.tanda = g('#pnTanda').value.trim(); }
+      else if (paso === 2) { st.precio = g('#pnPrecio').value; st.costo = g('#pnCosto').value; }
+      else if (!st.usa) st.cant = g('#pnCant') ? g('#pnCant').value : st.cant;
+    };
+    function pintar() {
+      m.foot.innerHTML = `<button type="button" class="btn secondary" data-atras>${paso === 1 ? 'Cancelar' : 'Atrás'}</button><button type="button" class="btn ${paso === 3 ? 'green' : ''}" data-sig>${paso === 3 ? icon('check') + ' Crear producto' : 'Siguiente'}</button>`;
+      if (paso === 1) {
+        box.innerHTML = `${puntos()}
+          <label class="field">¿Cómo se llama? *<input class="input" id="pnNombre" value="${esc(st.nombre)}" maxlength="120" placeholder="Ej.: Botella EcoTwist 750 ml" autocomplete="off"></label>
+          <div class="field"><span>Foto <span class="hint">opcional · puedes ponerla después</span></span>
+            <div class="foto-link" style="grid-template-columns:64px 1fr"><div class="prev" id="pnPrev" style="width:64px;height:64px">${st.foto ? U.imgTag(st.foto, '') : icon('image')}</div>
+              <div><input class="input" id="pnFoto" type="url" inputmode="url" placeholder="Pega el link de la foto" value="${esc(st.foto)}"></div></div></div>
+          ${APP.categorias.length ? `<div class="stack-sm"><b class="small">Categoría</b><div class="chips" style="flex-wrap:wrap;overflow:visible">${APP.categorias.map((c) => `<button type="button" class="chip" data-cat="${esc(c.id)}" aria-pressed="${st.cat === c.id}">${esc(c.nombre)}</button>`).join('')}</div></div>` : ''}
+          <label class="field">Tanda <span class="hint">ej.: Tupper Tips 11</span><input class="input" id="pnTanda" value="${esc(st.tanda)}" maxlength="60" placeholder="Para saber de qué campaña es"></label>`;
+        const fi = box.querySelector('#pnFoto'), prev = box.querySelector('#pnPrev');
+        APP.agregarSubir(fi);
+        const ver = U.debounce(() => { const u = U.imageUrl(fi.value); if (U.validUrl(u)) { const im = new Image(); im.onload = () => { prev.innerHTML = ''; prev.appendChild(im); im.style.cssText = 'width:100%;height:100%;object-fit:cover'; }; im.onerror = () => { prev.innerHTML = icon('alert'); }; im.src = u; } else prev.innerHTML = icon('image'); }, 300);
+        fi.addEventListener('input', ver); if (st.foto) ver();
+        box.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { st.cat = st.cat === b.dataset.cat ? '' : b.dataset.cat; box.querySelectorAll('[data-cat]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.cat === st.cat)); }));
+        setTimeout(() => box.querySelector('#pnNombre').focus(), 60);
+      } else if (paso === 2) {
+        box.innerHTML = `${puntos()}<p class="muted">«${esc(st.nombre)}»</p>
+          <label class="field">¿A cuánto lo vendes? *<input class="input big-in" id="pnPrecio" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Q 0.00" value="${esc(st.precio)}"></label>
+          <label class="field">¿Cuánto te costó? <span class="hint">opcional · solo lo ves tú, sirve para saber tu ganancia</span><input class="input" id="pnCosto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Q 0.00" value="${esc(st.costo)}"></label>
+          <p class="small muted" id="pnGan"></p>`;
+        const gan = () => { const p = parseFloat(box.querySelector('#pnPrecio').value), c = parseFloat(box.querySelector('#pnCosto').value); box.querySelector('#pnGan').textContent = p >= 0 && c >= 0 ? `Ganas ${U.money(p - c)} por pieza.` : ''; };
+        box.querySelector('#pnPrecio').addEventListener('input', gan); box.querySelector('#pnCosto').addEventListener('input', gan); gan();
+        setTimeout(() => box.querySelector('#pnPrecio').focus(), 60);
+      } else {
+        box.innerHTML = `${puntos()}<p class="muted">«${esc(st.nombre)}» · ${U.money(Number(st.precio) || 0)}</p>
+          <div class="seg" role="group" aria-label="Tipo"><button type="button" data-t="0" aria-pressed="${!st.usa}">Todos iguales</button><button type="button" data-t="1" aria-pressed="${st.usa}">Varios colores o diseños</button></div>
+          <div id="pnSin" ${st.usa ? 'hidden' : ''}><label class="field">¿Cuántas piezas tienes?<input class="input big-in" id="pnCant" type="number" inputmode="numeric" min="0" value="${esc(st.cant)}"></label></div>
+          <div id="pnCon" ${st.usa ? '' : 'hidden'}></div>`;
+        const con = box.querySelector('#pnCon');
+        if (st.usa) ed = APP.editorColores(con, st.colores || []);
+        box.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => {
+          st.usa = b.dataset.t === '1'; box.querySelectorAll('[data-t]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+          box.querySelector('#pnSin').hidden = st.usa; con.hidden = !st.usa;
+          if (st.usa && !con.children.length) ed = APP.editorColores(con, []);
+        }));
+      }
+      m.foot.querySelector('[data-atras]').addEventListener('click', () => { if (paso === 1) return m.close(); guardarCampos(); if (paso === 3 && st.usa && ed) st.colores = ed.get().colores; paso--; pintar(); });
+      m.foot.querySelector('[data-sig]').addEventListener('click', () => (paso === 3 ? crear() : siguiente()));
+    }
+    function siguiente() {
+      guardarCampos();
+      if (paso === 1 && !st.nombre) { box.querySelector('#pnNombre').focus(); return toast('Escribe cómo se llama.', { error: true }); }
+      if (paso === 1 && st.foto && !U.validUrl(st.foto)) return toast('El link de la foto debe empezar con https://', { error: true });
+      if (paso === 2 && (st.precio === '' || Number(st.precio) < 0)) { box.querySelector('#pnPrecio').focus(); return toast('Falta el precio de venta.', { error: true }); }
+      paso++; pintar();
+    }
+    async function crear() {
+      guardarCampos(); let colores = [];
+      if (st.usa) { colores = ed.get().colores; if (!colores.length) return toast('Elige al menos un diseño o un color.', { error: true }); }
+      const btn = m.foot.querySelector('[data-sig]'); btn.disabled = true;
       try {
-        const id = await API.saveProducto({ nombre, precio, costo: g('#prCosto').value || 0, cantidad: usa ? 0 : g('#prCant').value, stock_minimo: 2, activo: true, fotos: [], usa_colores: usa, colores, avisar_stock: false, campana: U.lsGet('vedith-campana', '') });
-        await APP.refreshCore(); m.close(); toast(`«${nombre}» creado`);
+        if (st.tanda) U.lsSet('vedith-campana', st.tanda);
+        const id = await API.saveProducto({ nombre: st.nombre, categoria_id: st.cat || null, precio: st.precio, costo: st.costo || 0, cantidad: st.usa ? 0 : st.cant, stock_minimo: 2, activo: true, fotos: st.foto ? [st.foto] : [], usa_colores: st.usa, colores, avisar_stock: false, campana: st.tanda });
+        await APP.refreshCore(); m.close(); toast(`«${st.nombre}» creado`);
         if (opts.onCreated) opts.onCreated(id); else APP.render();
       } catch (e) { btn.disabled = false; APP.handleErr(e); }
-    });
+    }
+    pintar();
   };
 
   /* =====================================================================

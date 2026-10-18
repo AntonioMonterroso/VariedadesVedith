@@ -42,6 +42,7 @@
     const bajos = activos.filter((p) => APP.stockEstado(p) !== 'ok');
     const sinEtiq = activos.filter((p) => !p.etiqueta_impresa_at);
     const pend = APP.pendientes ? APP.pendientes() : [];
+    const piezasTot = activos.reduce((s, p) => s + p.cantidad, 0), agotN = activos.filter((p) => APP.stockEstado(p) === 'agotado').length, okN = activos.length - bajos.length;
     const hora = new Date().getHours();
     const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
 
@@ -59,11 +60,18 @@
           <a class="kpi orange" href="#/cobrar" style="text-decoration:none;color:inherit"><span class="k-l">Por cobrar</span><span class="k-v num">${money(porCobrar)}</span><span class="small muted">${deudas.length} ${deudas.length === 1 ? 'deuda' : 'deudas'}</span></a>
           <a class="kpi" href="#/productos?f=stock" style="text-decoration:none;color:inherit"><span class="k-l">Poco o sin stock</span><span class="k-v num">${bajos.length}</span><span class="small muted">de ${activos.length} productos</span></a>
         </div>
+        <a class="card pano" href="#/inventario" style="text-decoration:none;color:inherit">
+          <div class="row between"><h2>Mi inventario</h2><span class="small muted">Ver todo ${icon('chevron', 'sm')}</span></div>
+          <div class="pano-num"><b class="num">${piezasTot}</b><span>piezas · ${activos.length} productos</span></div>
+          <div class="pano-bar" role="img" aria-label="${okN} bien, ${bajos.length - agotN} por acabarse, ${agotN} agotados"><i class="ok" style="flex:${okN || 0}"></i><i class="warn" style="flex:${bajos.length - agotN || 0}"></i><i class="bad" style="flex:${agotN || 0}"></i></div>
+          <div class="row wrap small"><span class="pill ok">${okN} bien</span><span class="pill warn">${bajos.length - agotN} por acabarse</span><span class="pill bad">${agotN} agotados</span></div>
+        </a>
         <div class="actions">
           <a class="action" href="#/vender"><span class="ic">${icon('bag', 'lg')}</span>Vender</a>
           <a class="action" href="#/ingreso"><span class="ic">${icon('plus', 'lg')}</span>Recibí mercadería</a>
           <a class="action" href="#/cajas"><span class="ic">${icon('box', 'lg')}</span>Cajas</a>
           <a class="action" href="#/etiquetas"><span class="ic">${icon('printer', 'lg')}</span>Imprimir etiquetas</a>
+          <button type="button" class="action" id="inNuevo"><span class="ic">${icon('package', 'lg')}</span>Producto nuevo</button>
         </div>
         <section class="stack-sm">
           <div class="row between"><h2>Últimas ventas</h2><a class="btn ghost sm" href="#/ventas">Ver todas</a></div>
@@ -72,6 +80,7 @@
         ${bajos.length ? `<section class="stack-sm"><h2>Para reponer</h2><div class="list">${bajos.slice(0, 6).map((p) => APP.productoItem(p)).join('')}</div></section>` : ''}
       </div>`;
     main.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => APP.openFicha(APP.prod(b.dataset.id))));
+    const nn = main.querySelector('#inNuevo'); if (nn) nn.addEventListener('click', () => APP.productoRapido());
   };
 
   function ventaItem(v) {
@@ -184,7 +193,7 @@
           <p>${APP.productos.length ? 'No encontré productos con esos filtros.' : ad ? 'Aún no hay productos. Agrega el primero.' : 'El catálogo está vacío por ahora.'}</p>
           ${ad && !APP.productos.length ? '<button type="button" class="btn" id="pVacioNuevo">Agregar producto</button>' : ''}</div>`;
       grid.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => APP.openFicha(APP.prod(b.dataset.id))));
-      const vn = grid.querySelector('#pVacioNuevo'); if (vn) vn.addEventListener('click', () => APP.openProductoForm());
+      const vn = grid.querySelector('#pVacioNuevo'); if (vn) vn.addEventListener('click', () => APP.productoRapido());
     };
     P.productos.paint = paint;
     paint();
@@ -196,7 +205,7 @@
       F.f = F.f === b.dataset.f ? '' : b.dataset.f;
       main.querySelectorAll('#pFil .chip').forEach((x) => x.setAttribute('aria-pressed', x.dataset.f === F.f)); paint();
     }));
-    const nb = main.querySelector('#pNuevo'); if (nb) nb.addEventListener('click', () => APP.openProductoForm());
+    const nb = main.querySelector('#pNuevo'); if (nb) nb.addEventListener('click', () => APP.productoRapido());
   };
 
   /* =====================================================================

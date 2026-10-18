@@ -113,6 +113,10 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 
 6. **Vender con fotos**: debajo de la venta salen todos los productos con su foto y «Quedan N»; se toca la foto para agregar (si tiene estilos, pregunta cuál). **Recibir** sugiere arriba los que se están acabando. La primera vez que alguien entra sale una ayuda corta de «lo básico en 3 toques».
 
+7. **Ver los productos**: en Inventario hay dos formas, **Cuadrícula** (3 columnas en el teléfono: foto, número de piezas encima, nombre y precio; al tocar sale el detalle con los estilos y sus cantidades) y **Detalle** (tarjetas grandes). La elegida se recuerda. El valor del inventario va en un desplegable.
+8. **Producto nuevo en 3 pasos** (botón **Nuevo** en Inventario, en Resumen, en Productos y al recibir mercadería): 1 nombre, foto (subir o link), categoría y tanda; 2 precio y costo (dice cuánto se gana por pieza); 3 cuántas piezas, o los estilos si viene en colores o diseños.
+9. **Resumen del día** ahora abre con un panorama del inventario: piezas, y cuántos productos están bien, por acabarse o agotados.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 
