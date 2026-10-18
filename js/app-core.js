@@ -99,9 +99,9 @@
     const here = new URL('./', location.href).href;
     return (cfg || here).replace(/[?#].*$/, '');
   };
-  APP.qrLink = (codigo) => {
+  APP.qrLink = (codigo, estilo) => {
     const b = APP.baseUrl();
-    return b + (b.endsWith('/') || /\.html?$/.test(b) ? '' : '/') + '?p=' + encodeURIComponent(codigo);
+    return b + (b.endsWith('/') || /\.html?$/.test(b) ? '' : '/') + '?p=' + encodeURIComponent(codigo) + (estilo ? '&e=' + encodeURIComponent(estilo) : '');
   };
   APP.baseUrlEsLocal = () => /^(file:|https?:\/\/(localhost|127\.|0\.0\.0\.0|192\.168\.|10\.))/i.test(APP.baseUrl());
 
@@ -127,23 +127,23 @@
   // Menú «Más», en grupos con nombres sencillos
   function moreItems() {
     return isAdmin() ? [
-      { g: 'Mi día', id: 'inicio', label: 'Resumen del día', icon: 'home' },
-      { id: 'ventas', label: 'Ventas', icon: 'receipt' },
-      { id: 'cobrar', label: 'Por cobrar', icon: 'users' },
-      { g: 'Mercadería', id: 'productos', label: 'Administrar productos', icon: 'package' },
-      { id: 'cajas', label: 'Cajas (pedidos)', icon: 'box' },
-      { id: 'pendientes', label: 'Falta foto o precio', icon: 'alert' },
-      { id: 'etiquetas', label: 'Imprimir etiquetas QR', icon: 'printer' },
-      { g: 'Dinero', id: 'dinero', label: 'Dinero y depósitos', icon: 'wallet' },
-      { id: 'gastos', label: 'Gastos', icon: 'wallet' },
-      { id: 'reportes', label: 'Reportes', icon: 'chart' },
-      { g: 'Compartir', id: 'catalogos', label: 'Catálogos (librito)', icon: 'book' },
-      { id: 'estados', label: 'Imágenes para estados', icon: 'image' },
-      { g: 'Privado', id: 'dulces', label: 'Dulces (privado)', icon: 'lock' },
-      { g: 'Sistema', id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
-      { id: 'ajustes', label: 'Ajustes', icon: 'sliders' }
+      { g: 'Mi día', id: 'inicio', label: 'Resumen del día', icon: 'home', d: 'Ventas de hoy y avisos' },
+      { id: 'ventas', label: 'Ventas', icon: 'receipt', d: 'Todo lo vendido' },
+      { id: 'cobrar', label: 'Por cobrar', icon: 'users', d: 'Quién te debe' },
+      { g: 'Mercadería', id: 'productos', label: 'Administrar productos', icon: 'package', d: 'Editar, ocultar, archivar' },
+      { id: 'cajas', label: 'Cajas (pedidos)', icon: 'box', d: 'Lo que pides a Tupperware' },
+      { id: 'pendientes', label: 'Falta foto o precio', icon: 'alert', d: 'Productos por completar' },
+      { id: 'etiquetas', label: 'Etiquetas QR', icon: 'printer', d: 'Imprimir con tu tamaño' },
+      { g: 'Dinero', id: 'dinero', label: 'Dinero y depósitos', icon: 'wallet', d: 'Efectivo y bancos' },
+      { id: 'gastos', label: 'Gastos', icon: 'wallet', d: 'Lo que gastas' },
+      { id: 'reportes', label: 'Reportes', icon: 'chart', d: 'Ganancias y Excel' },
+      { g: 'Compartir', id: 'catalogos', label: 'Catálogos (librito)', icon: 'book', d: 'PDF a librito' },
+      { id: 'estados', label: 'Imágenes para estados', icon: 'image', d: 'Para WhatsApp' },
+      { g: 'Privado', id: 'dulces', label: 'Dulces', icon: 'lock', d: 'Gelatinas y gomitas' },
+      { g: 'Sistema', id: 'notificaciones', label: 'Notificaciones', icon: 'bell', d: 'Avisos de ventas' },
+      { id: 'ajustes', label: 'Ajustes', icon: 'sliders', d: 'PIN, espacio, colores' }
     ] : [
-      { id: 'estados', label: 'Imágenes para estados', icon: 'image' }
+      { id: 'estados', label: 'Imágenes para estados', icon: 'image', d: 'Para WhatsApp' }
     ];
   }
   const conGrupos = (items, fila) => items.map((n) => (n.g ? `<div class="grp-t">${esc(n.g)}</div>` : '') + fila(n)).join('');
@@ -195,19 +195,33 @@
 
   function openMore() {
     const more = moreItems();
+    const badge = (id) => {
+      const n = id === 'notificaciones' ? APP.unread() : id === 'pendientes' && APP.pendientes ? APP.pendientes().length : id === 'etiquetas' ? APP.productos.filter((p) => p.activo && !p.etiqueta_impresa_at).length : 0;
+      return n ? `<span class="mo-badge">${n > 99 ? '99+' : n}</span>` : '';
+    };
+    let grupo = '';
+    const tiles = more.map((n) => { if (n.g) grupo = n.g; return { ...n, grupo }; });
+    const grupos = [...new Set(tiles.map((t) => t.grupo))];
     const m = openModal({
-      title: 'Más opciones',
-      body: `<div class="list">
-        ${conGrupos(more, (n) => `<a class="item" href="#/${n.id}" data-go>${icon(n.icon)}<span class="grow t1">${esc(n.label)}</span>${icon('chevron', 'sm')}</a>`)}
-        <button type="button" class="item" id="mAyuda">${icon('help')}<span class="grow t1">Cómo usar el panel</span>${icon('chevron', 'sm')}</button>
-        <button type="button" class="item" id="mInstall" ${APP.installEvent ? '' : 'hidden'}>${icon('download')}<span class="grow t1">Instalar app en el teléfono</span>${icon('chevron', 'sm')}</button>
-        <button type="button" class="item" id="mSalir">${icon('logout')}<span class="grow t1">Salir</span></button>
-      </div>`
+      title: 'Más opciones', wide: true,
+      body: `<div class="mo-user"><span class="mo-av">${icon(isAdmin() ? 'lock' : 'users')}</span><div class="grow"><b>${esc(APP.user.nombre || (isAdmin() ? 'Administración' : 'Visualizador'))}</b><div class="xs muted">${isAdmin() ? 'Administración · ves todo' : 'Visualizador · puedes vender'}</div></div></div>
+        ${more.length > 4 ? `<div class="searchbox">${icon('search')}<input class="input" id="moQ" type="search" placeholder="¿Qué buscas? (ej.: etiquetas, dinero)" autocomplete="off"></div>` : ''}
+        <div id="moLista" class="stack">${grupos.map((g) => `<section class="mo-grp" data-g><h3 class="grp-t">${esc(g || 'Opciones')}</h3><div class="mo-grid">${tiles.filter((t) => t.grupo === g).map((n) => `<a class="mo-tile" href="#/${n.id}" data-go data-k="${esc((n.label + ' ' + (n.d || '')).toLowerCase())}"><span class="mo-ic">${icon(n.icon, 'lg')}${badge(n.id)}</span><span class="mo-t"><b>${esc(n.label)}</b><small>${esc(n.d || '')}</small></span></a>`).join('')}</div></section>`).join('')}</div>
+        <section class="mo-grp"><h3 class="grp-t">Ayuda y cuenta</h3><div class="mo-grid">
+          <button type="button" class="mo-tile" id="mAyuda"><span class="mo-ic">${icon('help', 'lg')}</span><span class="mo-t"><b>Cómo usar el panel</b><small>Lo básico paso a paso</small></span></button>
+          <button type="button" class="mo-tile" id="mInstall" ${APP.installEvent ? '' : 'hidden'}><span class="mo-ic">${icon('download', 'lg')}</span><span class="mo-t"><b>Instalar app</b><small>En la pantalla de inicio</small></span></button>
+          <button type="button" class="mo-tile" id="mSalir"><span class="mo-ic">${icon('logout', 'lg')}</span><span class="mo-t"><b>Salir</b><small>Cerrar sesión</small></span></button></div></section>`
     });
     m.body.querySelectorAll('[data-go]').forEach((a) => a.addEventListener('click', () => m.close()));
     m.body.querySelector('#mAyuda').addEventListener('click', () => { m.close(); APP.openHelp(); });
     m.body.querySelector('#mInstall').addEventListener('click', () => { m.close(); APP.installApp(); });
     m.body.querySelector('#mSalir').addEventListener('click', APP.logout);
+    const q = m.body.querySelector('#moQ');
+    if (q) q.addEventListener('input', () => {
+      const t = q.value.trim().toLowerCase();
+      m.body.querySelectorAll('#moLista [data-k]').forEach((a) => { a.hidden = !!t && !a.dataset.k.includes(t); });
+      m.body.querySelectorAll('#moLista [data-g]').forEach((g) => { g.hidden = ![...g.querySelectorAll('[data-k]')].some((a) => !a.hidden); });
+    });
   }
 
   APP.installApp = async function () {
@@ -277,44 +291,67 @@
   APP.lightbox = lightbox;
 
   /* ---------- ficha de producto ---------- */
+  // Enlace para compartir una ficha (opcionalmente de un diseño o color en concreto)
+  APP.compartir = async function (p, estilo) {
+    const link = APP.qrLink(p.codigo, estilo);
+    const texto = `${p.nombre}${estilo ? ' · ' + estilo : ''} — ${money(p.precio)}`;
+    try { if (navigator.share) { await navigator.share({ title: p.nombre, text: texto, url: link }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto + '\n' + link)}`, '_blank', 'noopener');
+  };
+
   APP.openFicha = function (p) {
     const ad = isAdmin();
     const gan = ad && p.costo != null ? p.precio - p.costo : null;
+    const est = APP.stockEstado(p);
+    const es = APP.estilosDe ? APP.estilosDe(p) : [];
+    const tarjetasEstilo = es.map((e) => {
+      const foto = e.foto || '';
+      const cols = e.items.length > 1 || (e.items[0] && e.items[0].diseno && e.items[0].tono) ? e.items.filter((c) => c.tono) : [];
+      return `<div class="fe-card ${e.n <= 0 ? 'cero' : ''}">
+        <span class="fe-img" ${foto ? `data-foto="${esc(foto)}"` : ''}>${foto ? U.imgTag(foto, '') : e.solo ? APP.vdot(e.solo) : icon('tag')}</span>
+        <span class="fe-n num">${e.n}</span>
+        <span class="fe-nm">${esc(e.nombre)}</span>
+        ${cols.length ? `<span class="fe-cols">${cols.map((c) => `<span class="fe-col" title="${esc(c.tono)}">${APP.dot(c.tono, c.hex, c.hexes)}<b class="num">${c.cantidad == null ? '' : c.cantidad}</b></span>`).join('')}</span>` : ''}
+        <span class="fe-act"><button type="button" class="icon-btn" data-share="${esc(e.nombre)}" aria-label="Compartir ${esc(e.nombre)}">${icon('share')}</button>${ad ? `<button type="button" class="icon-btn" data-qr-est="${esc(e.nombre)}" aria-label="QR de ${esc(e.nombre)}">${icon('qr')}</button>` : ''}</span>
+      </div>`;
+    }).join('');
     const m = openModal({
       title: p.nombre,
       wide: true,
       body: `
         ${APP.gallery(p.fotos, p.nombre)}
-        <div class="row between wrap">
-          <div class="price-big num">${money(p.precio)}</div>
-          <div class="row wrap">${p.categoria ? `<span class="pill pink">${esc(p.categoria)}</span>` : ''}${APP.stockPill(p)}${ad && !p.activo ? '<span class="pill">Oculto</span>' : ''}</div>
+        <div class="ficha-top">
+          <div><div class="price-big num">${money(p.precio)}</div>
+            <div class="row wrap" style="margin-top:6px">${p.categoria ? `<span class="pill pink">${esc(p.categoria)}</span>` : ''}${ad && p.campana ? `<span class="pill">${esc(p.campana)}</span>` : ''}${ad && !p.activo ? '<span class="pill">Oculto</span>' : ''}</div></div>
+          <div class="inv-tot ${est}" style="min-width:84px"><b class="num">${p.cantidad}</b><small>${est === 'agotado' ? 'agotado' : 'tengo'}</small></div>
         </div>
         ${p.descripcion ? `<p class="muted">${esc(p.descripcion)}</p>` : ''}
-        ${p.usa_colores && p.colores.length ? `<div class="stack-sm"><h3 style="font-size:1rem">${APP.textoVar(p)[0]}</h3><div class="list">${p.colores.map((c) => `<div class="item" style="padding:10px 14px">${APP.vdot(c)}<span class="grow t1">${esc(c.color)}</span>${APP.pillColor(p, c)}</div>`).join('')}</div></div>` : ''}
+        ${es.length ? `<section class="stack-sm"><h3 class="ficha-h">Cuántos hay de cada ${APP.textoVar(p)[2]}</h3><div class="fe-grid">${tarjetasEstilo}</div></section>` : ''}
         ${p.precio_regateo != null ? (ad
           ? `<div class="banner info">${icon('tag')}<span class="small">Descuento (Regateo): <b class="num">${money(p.precio_regateo)}</b> — el precio más bajo al que se puede vender.</span></div>`
           : `<div class="stack-sm"><button type="button" class="btn ghost sm" id="regBtn" aria-expanded="false" style="justify-self:start">${icon('tag', 'sm')} Descuento (Regateo)</button>
              <div id="regBox" hidden class="row wrap"><span class="muted small">Último precio:</span><b class="num" style="font-size:1.15rem">${money(p.precio_regateo)}</b>
              <button type="button" class="btn secondary sm" data-a="vender-reg" ${APP.sinStock(p) ? 'disabled' : ''}>Vender a este precio</button></div></div>`) : ''}
-        <dl class="kv card flat">
-          <dt>Código</dt><dd>${esc(p.codigo)}</dd>
-          ${ad ? `<dt>Código Tupperware</dt><dd>${p.codigo_tupperware ? esc(p.codigo_tupperware) : '<span class="faint">sin anotar</span>'}</dd>
-          <dt>Costo</dt><dd class="num">${money(p.costo)}</dd>
-          <dt>Ganancia por pieza</dt><dd class="num">${money(gan)}</dd>
-          <dt>Tanda</dt><dd>${p.campana ? esc(p.campana) : '<span class="faint">sin tanda</span>'}</dd>
-          <dt>Aviso de poco stock</dt><dd>${p.avisar_stock === false ? 'Apagado' : 'Con ' + p.stock_minimo + ' o menos'}</dd>
-          <dt>Etiqueta QR</dt><dd>${p.etiqueta_impresa_at ? `Impresa · ${U.fmtDate(p.etiqueta_impresa_at)}` : '<span class="pill warn">Sin imprimir</span>'}</dd>` : ''}
-        </dl>
-        <div class="row wrap">
-          ${ad ? `<button type="button" class="btn secondary sm" data-a="ingreso">${icon('plus', 'sm')} Ingreso de mercadería</button>
-          <button type="button" class="btn secondary sm" data-a="qr">${icon('qr', 'sm')} Ver QR</button>
-          <button type="button" class="btn secondary sm" data-a="archivar">${icon('box', 'sm')} Archivar</button>` : ''}
-        </div>`,
-      footer: `${ad ? `<button type="button" class="btn secondary" data-a="editar">${icon('edit')} Editar</button>` : ''}
+        ${ad ? `<details class="card flat ficha-det"><summary>Datos solo para ti</summary>
+          <dl class="kv">
+            <dt>Costo</dt><dd class="num">${money(p.costo)}</dd>
+            <dt>Ganancia por pieza</dt><dd class="num">${money(gan)}${gan != null && p.precio > 0 ? ` <span class="muted">(${Math.round((gan / p.precio) * 100)} %)</span>` : ''}</dd>
+            <dt>Vale lo que tengo</dt><dd class="num">${money(p.precio * p.cantidad)}</dd>
+            <dt>Código Tupperware</dt><dd>${p.codigo_tupperware ? esc(p.codigo_tupperware) : '<span class="faint">sin anotar</span>'}</dd>
+            <dt>Tanda</dt><dd>${p.campana ? esc(p.campana) : '<span class="faint">sin tanda</span>'}</dd>
+            <dt>Aviso de poco stock</dt><dd>${p.avisar_stock === false ? 'Apagado' : 'Con ' + p.stock_minimo + ' o menos'}</dd>
+            <dt>Etiqueta QR</dt><dd>${p.etiqueta_impresa_at ? `Impresa · ${U.fmtDate(p.etiqueta_impresa_at)}` : '<span class="pill warn">Sin imprimir</span>'}</dd>
+          </dl></details>` : ''}
+        <p class="xs faint">Código ${esc(p.codigo)}</p>`,
+      footer: `<button type="button" class="btn secondary" data-a="mas" aria-label="Más opciones">${icon('more')} Más</button>
+               ${ad ? `<button type="button" class="btn secondary" data-a="editar">${icon('edit')} Editar</button>` : `<button type="button" class="btn secondary" data-a="compartir">${icon('share')} Compartir</button>`}
                <button type="button" class="btn" data-a="vender" ${APP.sinStock(p) ? 'disabled' : ''}>${icon('bag')} Vender</button>`
     });
     APP.bindGallery(m.body, p.fotos, p.nombre);
     APP.bindVarFotos(m.body);
+    m.body.querySelectorAll('.fe-img[data-foto]').forEach((el) => el.addEventListener('click', () => APP.lightbox([el.dataset.foto], 0)));
+    m.body.querySelectorAll('[data-share]').forEach((b) => b.addEventListener('click', () => APP.compartir(p, b.dataset.share)));
+    m.body.querySelectorAll('[data-qr-est]').forEach((b) => b.addEventListener('click', () => APP.openQR(p, b.dataset.qrEst)));
     const on = (a, fn) => { m.el.querySelectorAll(`[data-a="${a}"]`).forEach((b) => b.addEventListener('click', fn)); };
     const irVender = () => { if (APP.current === 'vender') APP.render(); else APP.go('vender'); };
     on('vender', () => { m.close(); APP.addToCart(p.id, { despues: irVender }); });
@@ -322,12 +359,25 @@
     const rb = m.body.querySelector('#regBtn');
     if (rb) rb.addEventListener('click', () => { const box = m.body.querySelector('#regBox'); box.hidden = !box.hidden; rb.setAttribute('aria-expanded', String(!box.hidden)); });
     on('editar', () => { m.close(); APP.openProductoForm(p); });
-    on('qr', () => APP.openQR(p));
-    on('archivar', async () => {
+    on('compartir', () => APP.compartir(p));
+    const archivar = async () => {
       if (!await confirmDialog({ title: 'Archivar producto', message: `«${p.nombre}» sale de la lista, del catálogo y del QR. Las ventas ya hechas no cambian. Lo puedes restaurar desde «Archivados».`, okLabel: 'Archivar' })) return;
       try { await API.archivarProductos([p.id]); await APP.refreshCore(); m.close(); APP.render(); toast('Producto archivado', { ms: 15000, action: { label: 'Deshacer', fn: async () => { try { await API.restaurarProductos([p.id]); await APP.refreshCore(); APP.render(); toast('Producto restaurado'); } catch (er) { APP.handleErr(er); } } } }); } catch (e) { APP.handleErr(e); }
+    };
+    on('mas', () => {
+      const mm = openModal({ title: 'Más opciones', body: `<div class="list">
+        <button type="button" class="item" data-x="compartir">${icon('share')}<span class="grow t1">Compartir por WhatsApp</span>${icon('chevron', 'sm')}</button>
+        ${ad ? `<button type="button" class="item" data-x="ingreso">${icon('plus')}<span class="grow t1">Llegó mercadería de este producto</span>${icon('chevron', 'sm')}</button>
+        <button type="button" class="item" data-x="qr">${icon('qr')}<span class="grow t1">Ver código QR</span>${icon('chevron', 'sm')}</button>
+        <button type="button" class="item" data-x="etiq">${icon('printer')}<span class="grow t1">Imprimir etiqueta${es.length > 1 ? 's (una por estilo)' : ''}</span>${icon('chevron', 'sm')}</button>
+        <button type="button" class="item" data-x="archivar">${icon('box')}<span class="grow t1">Archivar</span>${icon('chevron', 'sm')}</button>` : ''}</div>` });
+      const x = (k, fn) => { const b = mm.body.querySelector(`[data-x="${k}"]`); if (b) b.addEventListener('click', () => { mm.close(); fn(); }); };
+      x('compartir', () => APP.compartir(p));
+      x('ingreso', () => { m.close(); APP.loteInicial = [p.id]; APP.go('ingreso'); });
+      x('qr', () => APP.openQR(p));
+      x('etiq', () => { m.close(); APP.preselect = [p.id]; APP.go('etiquetas'); });
+      x('archivar', archivar);
     });
-    on('ingreso', () => { m.close(); APP.loteInicial = [p.id]; APP.go('ingreso'); });
   };
 
   function ingresoMercaderia(p, parent) {
@@ -357,13 +407,13 @@
     if (!window.QRCode) { el.textContent = text; return; }
     new QRCode(el, { text, width: size, height: size, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
   };
-  APP.openQR = function (p) {
-    const link = APP.qrLink(p.codigo);
+  APP.openQR = function (p, estilo) {
+    const link = APP.qrLink(p.codigo, estilo);
     const m = openModal({
-      title: 'Código QR · ' + p.codigo,
+      title: 'Código QR · ' + p.codigo + (estilo ? ' · ' + estilo : ''),
       body: `<div class="center stack">
         <div id="qrBox" style="display:grid;place-items:center;background:#fff;border-radius:16px;padding:16px;margin:0 auto"></div>
-        <b>${esc(p.nombre)}</b>
+        <b>${esc(p.nombre)}${estilo ? ' · ' + esc(estilo) : ''}</b>
         <p class="small muted" style="word-break:break-all">${esc(link)}</p>
         ${APP.baseUrlEsLocal() ? `<div class="banner">${icon('alert')}<span class="small">Este QR apunta a una dirección de prueba. Cuando la app esté publicada, pon la dirección final en Ajustes antes de imprimir.</span></div>` : ''}
       </div>`,

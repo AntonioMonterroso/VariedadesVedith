@@ -113,7 +113,7 @@
   /* =====================================================================
      FICHA PÚBLICA (QR) · no pide PIN
      ===================================================================== */
-  async function renderPublic(codigo) {
+  async function renderPublic(codigo, estilo) {
     root().innerHTML = '<div class="public"><div class="empty muted">Cargando…</div></div>';
     let r;
     try { r = await API.publicProducto(codigo); } catch (e) { r = null; }
@@ -124,18 +124,24 @@
         <div class="card center stack"><h1>Producto no disponible</h1><p class="muted">Este código ya no está en el catálogo o no existe.</p></div></div></div>`;
       return;
     }
-    const fotos = p.fotos || [];
+    const cols = p.colores || [];
+    const esMio = (c) => estilo && (c.diseno === estilo || c.color === estilo || c.tono === estilo);
+    const mios = cols.filter(esMio);
+    const fotoEst = (mios.find((c) => c.foto) || {}).foto;
+    const fotos = fotoEst ? [fotoEst, ...(p.fotos || []).filter((x) => x !== fotoEst)] : (p.fotos || []);
+    const dispEst = mios.length ? mios.some((c) => c.disponible) : null;
     const wa = String(cfg.whatsapp || '').replace(/\D/g, '');
-    const waUrl = wa ? `https://wa.me/${wa.length === 8 ? '502' + wa : wa}?text=${encodeURIComponent(`Hola, me interesa: ${p.nombre} (${p.codigo})`)}` : '';
+    const waUrl = wa ? `https://wa.me/${wa.length === 8 ? '502' + wa : wa}?text=${encodeURIComponent(`Hola, me interesa: ${p.nombre}${estilo ? ' · ' + estilo : ''} (${p.codigo})`)}` : '';
     document.title = `${p.nombre} · ${cfg.nombre_negocio || 'Vedith Variedades'}`;
     root().innerHTML = `<div class="public"><div class="public-card">
       <div class="top"><img src="assets/logo-pequeno.png" alt="${esc(cfg.nombre_negocio || 'Vedith Variedades')}"></div>
       <div class="card stack">
         ${APP.gallery(fotos, p.nombre)}
         <div><h1>${esc(p.nombre)}</h1>${p.categoria ? `<span class="pill pink" style="margin-top:6px">${esc(p.categoria)}</span>` : ''}</div>
+        ${estilo && mios.length ? `<div class="banner ${dispEst ? 'info' : 'bad'}">${icon('tag')}<span class="grow"><b>${esc(estilo)}</b> · ${dispEst ? 'Disponible' : 'Agotado por ahora'}</span></div>` : ''}
         <div class="row between wrap"><div class="price-big num">${money(p.precio)}</div>${p.disponible ? '<span class="pill ok">Disponible</span>' : '<span class="pill bad">Agotado por ahora</span>'}</div>
         ${p.descripcion ? `<p class="muted">${esc(p.descripcion)}</p>` : ''}
-        ${(p.colores || []).length ? `<div class="stack-sm"><span class="small" style="font-weight:800">${APP.textoVar(p)[0]}</span><div class="chips" style="flex-wrap:wrap;overflow:visible">${p.colores.map((c) => `<span class="chip" style="${c.disponible ? '' : 'opacity:.5;text-decoration:line-through'}">${APP.vdot(c)}${esc(c.color)}</span>`).join('')}</div></div>` : ''}
+        ${(p.colores || []).length ? `<div class="stack-sm"><span class="small" style="font-weight:800">${APP.textoVar(p)[0]}</span><div class="chips" style="flex-wrap:wrap;overflow:visible">${p.colores.map((c) => `<span class="chip" style="${c.disponible ? '' : 'opacity:.5;text-decoration:line-through'}${esMio(c) ? ';outline:2px solid var(--pink-600)' : ''}">${APP.vdot(c)}${esc(c.color)}</span>`).join('')}</div></div>` : ''}
         <p class="xs faint">Código ${esc(p.codigo)}</p>
         ${waUrl ? `<a class="btn green block" target="_blank" rel="noopener" href="${waUrl}">${icon('chat')} Preguntar por WhatsApp</a>` : ''}
       </div>
@@ -161,7 +167,7 @@
     const catalogo = new URLSearchParams(location.search).get('c');
     if (catalogo) return APP.renderCatalogoPublico(catalogo);
     const codigo = new URLSearchParams(location.search).get('p');
-    if (codigo) return renderPublic(codigo);
+    if (codigo) return renderPublic(codigo, new URLSearchParams(location.search).get('e') || '');
     let s = null;
     try { s = await API.init(); } catch (e) { console.error(e); }
     if (s) { APP.user = s; await startApp(); } else renderLogin();

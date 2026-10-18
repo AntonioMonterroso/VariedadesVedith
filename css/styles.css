@@ -451,36 +451,29 @@ button.kpi:active { transform: scale(0.98); }
 .sel-item input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--pink-600); flex: none; }
 .sel-item.selected { border-color: var(--pink-600); background: var(--pink-100); }
 
-/* Carta (216 × 279 mm) con márgenes de 8 mm = 200 × 263 mm útiles.
-   3 × 8: cada etiqueta mide 66,6 × 32 mm  → 8 filas = 256 mm  (cabe)
-   4 × 10: cada etiqueta mide 50 × 25,5 mm → 10 filas = 255 mm (cabe)
-   El QR va a la izquierda y el texto a la derecha, así nada se corta arriba ni abajo. */
-.label-sheet { display: grid; background: #fff; color: #000; width: 100%; }
-.label-sheet.f-24 { grid-template-columns: repeat(3, 1fr); grid-auto-rows: 32mm; }
-.label-sheet.f-40 { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 25.5mm; }
+/* Las medidas (ancho, alto, QR, letra) las pone el panel según el tamaño elegido: ver armarEtiquetas() */
+.label-sheet { display: grid; background: #fff; color: #000; }
 .etiqueta {
-  box-sizing: border-box; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2mm;
-  padding: 2mm 2.5mm; border: 1px dashed #bbb; text-align: left; overflow: hidden; break-inside: avoid; page-break-inside: avoid;
+  box-sizing: border-box; display: grid; align-items: center; gap: 2mm;
+  padding: 1.5mm 2mm; border: 1px dashed #bbb; text-align: left; overflow: hidden; break-inside: avoid; page-break-inside: avoid;
 }
-.etiqueta .qr { display: block; flex: none; }
-.f-24 .etiqueta .qr { width: 24mm; height: 24mm; }
-.f-40 .etiqueta .qr { width: 19mm; height: 19mm; }
+.label-sheet.horiz .etiqueta { grid-template-columns: auto minmax(0, 1fr); }
+.label-sheet.vert .etiqueta { grid-template-columns: 1fr; justify-items: center; text-align: center; align-content: center; gap: 1mm; }
+.etiqueta .qr { display: block; flex: none; width: var(--qr); height: var(--qr); }
 .etiqueta .qr img, .etiqueta .qr canvas { display: block; width: 100% !important; height: 100% !important; }
 .etiqueta .txt { display: grid; gap: .6mm; min-width: 0; align-content: center; }
-.etiqueta .e-nombre { font-family: var(--font-display); font-weight: 600; font-size: 10px; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
-.f-40 .etiqueta .e-nombre { font-size: 8.5px; }
-.etiqueta .e-cod { font-family: var(--font-body); font-size: 9px; font-weight: 800; letter-spacing: .03em; }
-.f-40 .etiqueta .e-cod { font-size: 8px; }
-.etiqueta .e-precio { font-family: var(--font-body); font-size: 12px; font-weight: 800; }
-.f-40 .etiqueta .e-precio { font-size: 10px; }
+.etiqueta .e-nombre { font-family: var(--font-display); font-weight: 600; font-size: var(--fs); line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+.etiqueta .e-estilo { font-family: var(--font-body); font-weight: 800; font-size: calc(var(--fs) * 1.05); line-height: 1.1; }
+.etiqueta .e-cod { font-family: var(--font-body); font-size: calc(var(--fs) * .9); font-weight: 800; letter-spacing: .03em; }
+.etiqueta .e-precio { font-family: var(--font-body); font-size: calc(var(--fs) * 1.2); font-weight: 800; }
+.et-mini { width: 40px; height: 40px; border-radius: 10px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; flex: none; }
+.et-mini img { width: 100%; height: 100%; object-fit: cover; }
 .label-preview { max-height: 46dvh; overflow: auto; border: 1.5px solid var(--line); border-radius: var(--r-md); background: #fff; }
 #printArea { display: none; }
 @media print {
-  @page { size: letter portrait; margin: 8mm; }
   html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
   body > *:not(#printArea) { display: none !important; }
   #printArea { display: block !important; }
-  .label-sheet { width: 200mm; }
   .etiqueta { border-color: #ccc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
@@ -955,3 +948,42 @@ button.action { font: inherit; color: inherit; cursor: pointer; }
 .kpi-det > summary::-webkit-details-marker { display: none; }
 .kpi-det > summary::after { content: ' ▾'; color: var(--ink-3); }
 .kpi-det[open] > summary::after { content: ' ▴'; }
+
+/* ===== Ficha del producto ===== */
+.ficha-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ficha-h { font-size: 1rem; }
+.fe-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 560px) { .fe-grid { grid-template-columns: repeat(3, 1fr); } }
+.fe-card { position: relative; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 10px 8px 8px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.fe-card.cero { border-color: rgba(211,64,64,.45); background: rgba(211,64,64,.07); }
+.fe-img { width: 72px; height: 72px; border-radius: 16px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; cursor: pointer; }
+.fe-img img { width: 100%; height: 100%; object-fit: cover; }
+.fe-n { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.fe-card.cero .fe-n { color: #d34040; }
+.fe-nm { font-size: .85rem; font-weight: 700; line-height: 1.2; }
+.fe-cols { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.fe-col { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; }
+.fe-act { display: flex; gap: 2px; margin-top: 2px; }
+.fe-act .icon-btn { width: 36px; height: 36px; }
+.ficha-det > summary { cursor: pointer; font-weight: 800; padding: 2px 0 8px; }
+
+/* ===== Más opciones ===== */
+.mo-user { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--surface-2); }
+.mo-av { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--pink-600); color: #fff; flex: none; }
+.mo-grp .grp-t { margin: 6px 4px 8px; }
+.mo-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 560px) { .mo-grid { grid-template-columns: repeat(3, 1fr); } }
+.mo-tile { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: inherit; text-decoration: none; cursor: pointer; font: inherit; transition: transform 140ms var(--ease-out), background-color 160ms var(--ease-out); min-height: 64px; }
+.mo-tile:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .mo-tile:hover { background: var(--surface-2); } }
+.mo-tile[hidden] { display: none; }
+.mo-ic { position: relative; width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--surface-2); color: var(--pink-600); flex: none; }
+.mo-badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #d34040; color: #fff; font-size: .7rem; font-weight: 800; display: grid; place-items: center; }
+.mo-t { display: grid; min-width: 0; line-height: 1.2; }
+.mo-t b { font-size: .9rem; } .mo-t small { color: var(--ink-3); font-size: .74rem; }
+.sheet .gallery .main-foto { aspect-ratio: 16 / 10; max-height: 34dvh; }
+.sheet .gallery .main-foto img { object-fit: contain; }
+.main > *, .card.stack, .label-preview { min-width: 0; max-width: 100%; }
+.label-preview { overflow-x: auto; }
+.main { min-width: 0; }
+.shell { min-width: 0; }

@@ -111,6 +111,7 @@
     }
     return cs.map((c) => ({ nombre: c.color, foto: c.foto || '', n: Number(c.cantidad) || 0, items: [c], solo: c }));
   }
+  APP.estilosDe = estilos;
   const fotoDe = (p) => (p.fotos && p.fotos[0]) || '';
 
   function tarjeta(p) {

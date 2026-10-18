@@ -117,6 +117,12 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 8. **Producto nuevo en 3 pasos** (botón **Nuevo** en Inventario, en Resumen, en Productos y al recibir mercadería): 1 nombre, foto (subir o link), categoría y tanda; 2 precio y costo (dice cuánto se gana por pieza); 3 cuántas piezas, o los estilos si viene en colores o diseños.
 9. **Resumen del día** ahora abre con un panorama del inventario: piezas, y cuántos productos están bien, por acabarse o agotados.
 
+## 15. Ficha, QR por diseño, tamaño de etiquetas y «Más»
+1. **Ficha del producto**: foto arriba, precio, «tengo N» y una tarjeta por cada diseño o color con su foto y su cantidad (con los colores de cada diseño debajo). Cada tarjeta se comparte por WhatsApp y, para la administración, tiene su propio QR. Los datos de dinero (costo, ganancia y %, valor de lo que tienes, código Tupperware) van escondidos en «Datos solo para ti». Abajo: Vender, Editar y **Más** (compartir, llegó mercadería, QR, etiquetas, archivar).
+2. **QR por diseño**: el enlace puede llevar el diseño (`?p=VED-0007&e=Princesas`). Al escanearlo, la ficha pública abre con la foto de ese diseño primero, marcado y diciendo si está disponible. No hace falta correr ningún SQL.
+3. **Etiquetas**: en **Más → Etiquetas QR** eliges los productos y luego «Una etiqueta por Producto / Cada diseño o color». El tamaño lo pones tú: botones rápidos (Pequeña 50×25, Mediana 66×32, Grande 100×50, Extra grande 100×70, Cuadrada 70×70) o escribes ancho, alto y tamaño del QR en milímetros; también la hoja (Carta o A4) y el margen. Te dice cuántas caben por hoja y se acuerda de tu elección en ese dispositivo.
+4. **Más opciones**: ahora son botones grandes agrupados (Mi día, Mercadería, Dinero, Compartir, Privado, Sistema), con una frase que explica cada uno, un buscador y números rojos donde hay algo pendiente (avisos, productos sin foto o precio, etiquetas sin imprimir).
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

@@ -229,51 +229,106 @@
   /* =====================================================================
      ETIQUETAS QR  (solo admin; nunca se bloquea reimprimir)
      ===================================================================== */
-  const ef = { filtro: 'pendientes', cat: '', formato: 'f-24', precio: true, sel: new Set() };
+  const PAPELES = { letter: ['Carta', 216, 279], a4: ['A4', 210, 297] };
+  const TAMANOS = [['Pequeña', 50, 25], ['Mediana', 66, 32], ['Grande', 100, 50], ['Extra grande', 100, 70], ['Cuadrada', 70, 70]];
+  const ef = { filtro: 'pendientes', cat: '', modo: 'producto', precio: true, sel: new Set(),
+    t: { papel: 'letter', w: 66, h: 32, qr: 0, margen: 8, ...(U.lsGet('vedith-etq', null) || {}) } };
+  // Medidas de una hoja: cuántas etiquetas caben, tamaño del QR y de la letra
+  const medidas = () => {
+    const t = ef.t, [, pw, ph] = PAPELES[t.papel] || PAPELES.letter;
+    const w = Math.max(20, Number(t.w) || 66), h = Math.max(15, Number(t.h) || 32), m = Math.max(0, Number(t.margen) || 0);
+    const cols = Math.floor((pw - 2 * m) / w), rows = Math.floor((ph - 2 * m) / h);
+    const horiz = w >= h * 1.3;
+    const auto = horiz ? Math.min(h - 4, w * 0.5) : Math.min(w - 4, h * 0.6);
+    const qr = Math.max(10, Math.min(Number(t.qr) || auto, horiz ? h - 2 : w - 2));
+    const fs = Math.max(7, Math.min(16, Math.min(h, w / 2.2) * 0.3));
+    return { w, h, m, cols, rows, horiz, qr, fs, pw, ph, porHoja: Math.max(0, cols * rows) };
+  };
+  // Qué etiquetas salen: una por producto, o una por cada estilo (diseño o color)
+  const armarLista = (productos) => {
+    const out = [];
+    productos.forEach((p) => {
+      const es = ef.modo === 'estilo' && APP.estilosDe ? APP.estilosDe(p) : [];
+      if (es.length > 1) es.forEach((e) => out.push({ p, estilo: e.nombre })); else out.push({ p, estilo: '' });
+    });
+    return out;
+  };
+
   P.etiquetas = async function (main) {
     if (APP.preselect) { ef.sel = new Set(APP.preselect); ef.filtro = 'todas'; APP.preselect = null; }
     const visibles = () => APP.productos.filter((p) => p.activo
       && (ef.filtro === 'todas' || (ef.filtro === 'pendientes' ? !p.etiqueta_impresa_at : !!p.etiqueta_impresa_at))
       && (!ef.cat || p.categoria_id === ef.cat));
     const pendientes = APP.productos.filter((p) => p.activo && !p.etiqueta_impresa_at).length;
+    const num = (id, v, min, max, step) => `<input class="input" id="${id}" type="number" inputmode="decimal" min="${min}" max="${max}" step="${step || 1}" value="${esc(v)}" style="min-height:44px">`;
 
     const paint = () => {
       const list = visibles();
       const elegidos = APP.productos.filter((p) => ef.sel.has(p.id));
+      const etiquetas = armarLista(elegidos), M = medidas(), t = ef.t;
+      const hojas = M.porHoja ? Math.ceil(etiquetas.length / M.porHoja) : 0;
+      const hayEstilos = APP.productos.some((p) => APP.estilosDe && APP.estilosDe(p).length > 1);
       main.innerHTML = `
         <div class="page-head"><div><h1>Etiquetas QR</h1><p class="sub">${pendientes ? `<b>${pendientes}</b> sin imprimir` : 'Todas las etiquetas están impresas'} · puedes reimprimir cuando quieras.</p></div></div>
         ${APP.baseUrlEsLocal() ? `<div class="banner" style="margin-bottom:14px">${icon('alert')}<span class="small">Los QR apuntan a <b>${esc(APP.baseUrl())}</b>, una dirección de prueba. Cuando publiques la app, escribe su dirección real en <a href="#/ajustes">Ajustes</a> antes de imprimir las definitivas.</span></div>` : ''}
+        <h2 class="small" style="font-weight:800;margin-bottom:6px">1. Elige qué imprimir</h2>
         <div class="chips" role="group" aria-label="Qué mostrar">
           ${[['pendientes', 'Sin imprimir'], ['impresas', 'Ya impresas'], ['todas', 'Todas']].map(([k, l]) => `<button type="button" class="chip" data-fil="${k}" aria-pressed="${ef.filtro === k}">${l}</button>`).join('')}
           <select class="input" id="efCat" style="width:auto;min-height:40px;border-radius:999px" aria-label="Categoría"><option value="">Todas las categorías</option>${APP.categorias.map((c) => `<option value="${esc(c.id)}" ${c.id === ef.cat ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select>
         </div>
         <div class="row between wrap" style="margin:6px 0 10px"><label class="row"><input type="checkbox" id="efAll" style="width:22px;height:22px;accent-color:var(--pink-600)" ${list.length && list.every((p) => ef.sel.has(p.id)) ? 'checked' : ''}> <b>Seleccionar todo (${list.length})</b></label><span class="small muted">${elegidos.length} elegidos</span></div>
-        <div class="list" style="max-height:44dvh;overflow:auto;margin-bottom:16px">
-          ${list.length ? list.map((p) => `<label class="sel-item ${ef.sel.has(p.id) ? 'selected' : ''}"><input type="checkbox" data-id="${esc(p.id)}" ${ef.sel.has(p.id) ? 'checked' : ''}>
-            <span class="grow"><div class="t1">${esc(p.nombre)}</div><div class="t2">${esc(p.codigo)} · ${money(p.precio)}</div></span>
-            ${p.etiqueta_impresa_at ? `<span class="pill ok">Impresa ${fmtDate(p.etiqueta_impresa_at)}</span>` : '<span class="pill pink">Sin imprimir</span>'}</label>`).join('') : '<div class="card empty flat">No hay productos con este filtro.</div>'}
+        <div class="list" style="max-height:38dvh;overflow:auto;margin-bottom:16px">
+          ${list.length ? list.map((p) => { const ne = APP.estilosDe ? APP.estilosDe(p).length : 0; return `<label class="sel-item ${ef.sel.has(p.id) ? 'selected' : ''}"><input type="checkbox" data-id="${esc(p.id)}" ${ef.sel.has(p.id) ? 'checked' : ''}>
+            <span class="et-mini">${p.fotos && p.fotos[0] ? U.imgTag(p.fotos[0], '') : icon('image')}</span>
+            <span class="grow"><div class="t1">${esc(p.nombre)}</div><div class="t2">${esc(p.codigo)} · ${money(p.precio)}${ne > 1 ? ` · ${ne} estilos` : ''}</div></span>
+            ${p.etiqueta_impresa_at ? `<span class="pill ok">Impresa ${fmtDate(p.etiqueta_impresa_at)}</span>` : '<span class="pill pink">Sin imprimir</span>'}</label>`; }).join('') : '<div class="card empty flat">No hay productos con este filtro.</div>'}
         </div>
+        <h2 class="small" style="font-weight:800;margin-bottom:6px">2. Cómo quieres las etiquetas</h2>
         <section class="card stack">
-          <div class="row wrap"><span class="small" style="font-weight:800">Tamaño de hoja</span>
-            <div class="seg" role="group" aria-label="Formato"><button type="button" data-fmt="f-24" aria-pressed="${ef.formato === 'f-24'}">3 × 8 (24)</button><button type="button" data-fmt="f-40" aria-pressed="${ef.formato === 'f-40'}">4 × 10 (40)</button></div></div>
+          ${hayEstilos ? `<div class="stack-sm"><span class="small" style="font-weight:800">¿Una etiqueta por…?</span>
+            <div class="seg" role="group" aria-label="Una etiqueta por"><button type="button" data-modo="producto" aria-pressed="${ef.modo === 'producto'}">Producto</button><button type="button" data-modo="estilo" aria-pressed="${ef.modo === 'estilo'}">Cada diseño o color</button></div>
+            <p class="xs muted">${ef.modo === 'estilo' ? 'Los productos con varios estilos sacan una etiqueta por estilo. Al escanearla, la ficha abre justo ese diseño o color, con su foto.' : 'Una sola etiqueta por producto; al escanearla se ven todos sus estilos.'}</p></div>` : ''}
+          <div class="stack-sm"><span class="small" style="font-weight:800">Tamaño de cada etiqueta</span>
+            <div class="chips" role="group" aria-label="Tamaños">${TAMANOS.map(([n, w, h]) => `<button type="button" class="chip" data-tam="${w}x${h}" aria-pressed="${Number(t.w) === w && Number(t.h) === h}">${n} · ${w}×${h} mm</button>`).join('')}</div>
+            <div class="grid-3">
+              <label class="field">Ancho (mm)${num('efW', t.w, 20, 200)}</label>
+              <label class="field">Alto (mm)${num('efH', t.h, 15, 250)}</label>
+              <label class="field">QR (mm) <span class="hint">0 = automático</span>${num('efQR', t.qr || 0, 0, 150)}</label>
+            </div>
+            <div class="grid-3">
+              <label class="field">Hoja<select class="input" id="efPapel" style="min-height:44px">${Object.entries(PAPELES).map(([k, [n]]) => `<option value="${k}" ${t.papel === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+              <label class="field">Margen (mm)${num('efM', t.margen, 0, 30)}</label>
+              <label class="field">Se imprime<span class="small" style="display:block;padding-top:10px">${M.porHoja ? `<b>${M.porHoja}</b> por hoja (${M.cols} × ${M.rows})` : '<b style="color:var(--red-600)">No cabe</b>'}</span></label>
+            </div>
+            ${M.porHoja ? '' : '<div class="banner bad">' + icon('alert') + '<span class="small">La etiqueta es más grande que la hoja. Achica el tamaño o el margen.</span></div>'}
+          </div>
           <label class="row"><input type="checkbox" id="efPrecio" ${ef.precio ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span>Mostrar el precio en la etiqueta</span></label>
           <div class="row wrap">
-            <button type="button" class="btn" id="efPrint" ${elegidos.length ? '' : 'disabled'}>${icon('printer')} Imprimir ${elegidos.length || ''} ${elegidos.length === 1 ? 'etiqueta' : 'etiquetas'}</button>
+            <button type="button" class="btn" id="efPrint" ${etiquetas.length && M.porHoja ? '' : 'disabled'}>${icon('printer')} Imprimir ${etiquetas.length || ''} ${etiquetas.length === 1 ? 'etiqueta' : 'etiquetas'}${hojas > 1 ? ` · ${hojas} hojas` : ''}</button>
             <button type="button" class="btn secondary" id="efMarcar" ${elegidos.length ? '' : 'disabled'}>Marcar como impresas</button>
             <button type="button" class="btn ghost" id="efDesmarcar" ${elegidos.length ? '' : 'disabled'}>Marcar como sin imprimir</button>
           </div>
-          ${elegidos.length ? '<div><div class="small muted" style="margin-bottom:6px">Vista previa (primeras etiquetas):</div><div class="label-preview"><div class="label-sheet ' + ef.formato + '" id="efPrev"></div></div></div>' : ''}
+          ${etiquetas.length && M.porHoja ? '<div><div class="small muted" style="margin-bottom:6px">Vista previa (tamaño real, se ajusta a la pantalla):</div><div class="label-preview" id="efPrevBox"><div class="label-sheet" id="efPrev"></div></div></div>' : ''}
         </section>`;
       bind(elegidos);
-      if (elegidos.length) armarEtiquetas(main.querySelector('#efPrev'), elegidos.slice(0, ef.formato === 'f-24' ? 6 : 8));
+      const pv = main.querySelector('#efPrev');
+      if (pv) {
+        armarEtiquetas(pv, etiquetas.slice(0, Math.max(M.cols * 2, 2)));
+        const caja = main.querySelector('#efPrevBox'), ancho = M.cols * M.w * 3.78 + 4;
+        pv.style.zoom = Math.min(1, Math.max(0.2, (caja.clientWidth - 4) / ancho)).toFixed(3);
+      }
     };
 
+    const guardarT = () => U.lsSet('vedith-etq', ef.t);
     const bind = (elegidos) => {
       main.querySelectorAll('[data-fil]').forEach((b) => b.addEventListener('click', () => { ef.filtro = b.dataset.fil; paint(); }));
       main.querySelector('#efCat').addEventListener('change', (e) => { ef.cat = e.target.value; paint(); });
       main.querySelector('#efAll').addEventListener('change', (e) => { visibles().forEach((p) => (e.target.checked ? ef.sel.add(p.id) : ef.sel.delete(p.id))); paint(); });
       main.querySelectorAll('.sel-item input').forEach((c) => c.addEventListener('change', () => { c.checked ? ef.sel.add(c.dataset.id) : ef.sel.delete(c.dataset.id); paint(); }));
-      main.querySelectorAll('[data-fmt]').forEach((b) => b.addEventListener('click', () => { ef.formato = b.dataset.fmt; paint(); }));
+      main.querySelectorAll('[data-modo]').forEach((b) => b.addEventListener('click', () => { ef.modo = b.dataset.modo; paint(); }));
+      main.querySelectorAll('[data-tam]').forEach((b) => b.addEventListener('click', () => { const [w, h] = b.dataset.tam.split('x'); ef.t.w = Number(w); ef.t.h = Number(h); ef.t.qr = 0; guardarT(); paint(); }));
+      const campo = (id, k) => main.querySelector(id).addEventListener('change', (e) => { ef.t[k] = k === 'papel' ? e.target.value : Number(e.target.value) || 0; guardarT(); paint(); });
+      campo('#efW', 'w'); campo('#efH', 'h'); campo('#efQR', 'qr'); campo('#efM', 'margen'); campo('#efPapel', 'papel');
       main.querySelector('#efPrecio').addEventListener('change', (e) => { ef.precio = e.target.checked; paint(); });
       main.querySelector('#efMarcar').addEventListener('click', () => marcar(elegidos, true));
       main.querySelector('#efDesmarcar').addEventListener('click', () => marcar(elegidos, false));
@@ -285,17 +340,21 @@
     }
 
     async function imprimir(lista) {
+      const M = medidas(), etiquetas = armarLista(lista);
       let area = document.getElementById('printArea');
       if (!area) { area = document.createElement('div'); area.id = 'printArea'; document.body.appendChild(area); }
-      area.innerHTML = `<div class="label-sheet ${ef.formato}" id="printSheet"></div>`;
-      armarEtiquetas(area.firstChild, lista);
-      await new Promise((r) => setTimeout(r, 350)); // los QR se dibujan en un instante
+      area.innerHTML = '<div class="label-sheet" id="printSheet"></div>';
+      armarEtiquetas(area.firstChild, etiquetas);
+      let st = document.getElementById('printPage');
+      if (!st) { st = document.createElement('style'); st.id = 'printPage'; document.head.appendChild(st); }
+      st.textContent = `@media print { @page { size: ${M.pw}mm ${M.ph}mm; margin: ${M.m}mm; } }`;
+      await new Promise((r) => setTimeout(r, 400)); // los QR se dibujan en un instante
       const despues = () => {
         window.removeEventListener('afterprint', despues);
         setTimeout(() => {
           const m = openModal({
             title: '¿Se imprimieron bien?',
-            body: `<p>Si las ${lista.length} etiquetas salieron bien, márcalas como impresas para que el panel te avise cuáles faltan. Si no, no pasa nada: puedes volver a imprimirlas.</p>`,
+            body: `<p>Si las ${etiquetas.length} etiquetas salieron bien, márcalas como impresas para que el panel te avise cuáles faltan. Si no, no pasa nada: puedes volver a imprimirlas (y cambiar el tamaño aquí mismo).</p>`,
             footer: '<button type="button" class="btn secondary" data-no>No, todavía no</button><button type="button" class="btn green" data-ok>Sí, marcar impresas</button>'
           });
           m.foot.querySelector('[data-no]').addEventListener('click', () => m.close());
@@ -306,14 +365,17 @@
       window.print();
     }
 
-    function armarEtiquetas(el, lista) {
-      const size = ef.formato === 'f-24' ? 200 : 160; // en píxeles, para que el QR salga nítido al imprimir
+    function armarEtiquetas(el, etiquetas) {
+      const M = medidas();
+      el.className = 'label-sheet ' + (M.horiz ? 'horiz' : 'vert');
+      el.style.cssText = `grid-template-columns: repeat(${Math.max(1, M.cols)}, ${M.w}mm); grid-auto-rows: ${M.h}mm; width: ${Math.max(1, M.cols) * M.w}mm; --qr: ${M.qr}mm; --fs: ${M.fs}px;`;
       el.innerHTML = '';
-      lista.forEach((p) => {
+      const px = Math.max(120, Math.min(420, Math.round(M.qr * 10)));
+      etiquetas.forEach(({ p, estilo }) => {
         const d = document.createElement('div'); d.className = 'etiqueta';
-        d.innerHTML = `<div class="qr"></div><div class="txt"><div class="e-nombre">${esc(p.nombre)}</div><div class="e-cod">${esc(p.codigo)}</div>${ef.precio ? `<div class="e-precio">${money(p.precio)}</div>` : ''}</div>`;
+        d.innerHTML = `<div class="qr"></div><div class="txt"><div class="e-nombre">${esc(p.nombre)}</div>${estilo ? `<div class="e-estilo">${esc(estilo)}</div>` : ''}<div class="e-cod">${esc(p.codigo)}</div>${ef.precio ? `<div class="e-precio">${money(p.precio)}</div>` : ''}</div>`;
         el.appendChild(d);
-        APP.makeQR(d.querySelector('.qr'), APP.qrLink(p.codigo), size);
+        APP.makeQR(d.querySelector('.qr'), APP.qrLink(p.codigo, estilo), px);
       });
     }
     paint();
