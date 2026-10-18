@@ -259,6 +259,13 @@
               </div>`).join('') : `<div class="card empty flat">${icon('bag', 'lg')}<p>Aún no has agregado nada. Usa el buscador de arriba.</p></div>`}
           </section>
 
+          <section class="stack-sm" id="vGridBox" aria-label="Productos para agregar">
+            <h2 class="small" style="font-weight:800">${lines.length ? 'Agregar otro' : 'Toca la foto para agregar'}</h2>
+            <div class="vgrid">${APP.productos.filter((p) => p.activo !== false && !APP.sinStock(p)).map((p) => `<button type="button" class="vtile" data-add="${esc(p.id)}">
+              <span class="vt-foto">${p.fotos && p.fotos[0] ? U.imgTag(p.fotos[0], '') : U.placeholder('Sin foto')}<span class="vt-q pill ${APP.stockEstado(p) === 'poco' ? 'warn' : 'ok'}">${p.avisar_stock === false ? 'Hay' : 'Quedan ' + p.cantidad}</span></span>
+              <span class="vt-n">${esc(p.nombre)}</span><span class="vt-p num">${money(p.precio)}</span></button>`).join('')}</div>
+          </section>
+
           ${lines.length ? `
           <div class="total-bar"><span>Total</span><b class="num" id="vTotal">${money(total)}</b></div>
           <section class="card stack" aria-label="Datos de la venta">
@@ -293,8 +300,11 @@
 
     function bind() {
       const q = main.querySelector('#vQ'), res = main.querySelector('#vRes');
+      const gb = main.querySelector('#vGridBox');
+      main.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => APP.addToCart(b.dataset.add, { despues: () => { saveFormFields(); paint(); } })));
       const pintarRes = () => {
         const txt = q.value.trim();
+        if (gb) gb.hidden = !!txt;
         if (!txt) { res.hidden = true; return; }
         const list = APP.productos.filter((p) => p.activo !== false && APP.matchProducto(p, txt)).slice(0, 8);
         res.hidden = false;

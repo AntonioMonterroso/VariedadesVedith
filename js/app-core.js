@@ -630,6 +630,10 @@
       title: 'Cómo usar el panel',
       wide: true,
       body: `<div class="help">
+        <h3>Lo básico en 3 toques</h3>
+        <ol><li><b>Inventario</b>: ves cada producto con su foto y cuántos tienes de cada estilo.</li>
+        <li><b>Vender</b>: tocas la foto de lo que se lleva el cliente y registras.</li>
+        ${ad ? '<li><b>Recibir</b>: cuando llega mercadería, buscas el producto (o lo creas) y pones cuántos de cada estilo.</li>' : '<li><b>Mis ventas</b>: ves lo que has vendido.</li>'}</ol>
         <h3>Buscar rápido</h3>
         <ul><li>Toca la lupa de arriba (o <b>Ctrl + K</b> en computadora) y escribe el nombre o el código.</li>
         <li>Toca el ícono de cámara para <b>escanear la etiqueta QR</b> de un producto y ver su precio al instante.</li></ul>
@@ -637,8 +641,8 @@
         <ol><li>Toca el botón rosado <b>Vender</b>.</li><li>Busca el producto y tócalo para agregarlo. Cambia la cantidad si hace falta.</li>
         <li>Elige <b>Contado</b> o <b>Fiado</b> (si es fiado, escribe el nombre del cliente).</li><li>Escribe quién vende y toca <b>Registrar venta</b>. El inventario baja solo${ad ? '' : ' y la administración recibe el aviso'}.</li></ol>
         ${ad ? `<h3>Agregar productos</h3>
-        <ol><li>En <b>Productos</b> toca <b>+ Producto</b>.</li><li>Llena nombre, precio y cantidad. Pon el <b>código de Tupperware</b> si lo tienes (solo tú lo ves).</li>
-        <li>Para las fotos, pega el link de la imagen de internet (hasta 5).</li></ol>
+        <ol><li>Lo más fácil: toca <b>Recibir</b> y, si es nuevo, <b>Es un producto nuevo</b>. También puedes ir a <b>Más → Administrar productos → + Producto</b>.</li><li>Llena nombre, precio y cantidad. Pon el <b>código de Tupperware</b> si lo tienes (solo tú lo ves).</li>
+        <li>Para las fotos, toca <b>Subir foto</b> (cámara o galería; se achica sola) o pega el link de la imagen (hasta 5).</li></ol>
         <h3>Etiquetas QR</h3>
         <p>En <b>Más → Imprimir etiquetas QR</b> eliges los productos y sale una hoja lista para imprimir. El panel te muestra cuáles ya imprimiste y cuáles faltan; siempre puedes volver a imprimir.</p>
         <h3>Avisos en el teléfono</h3>

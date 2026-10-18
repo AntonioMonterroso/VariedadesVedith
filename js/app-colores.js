@@ -355,6 +355,7 @@
           <button type="button" class="icon-btn" id="irScan" aria-label="Escanear QR" style="border:1.5px solid var(--line-strong);border-radius:14px;width:52px;height:52px">${icon('scan')}</button>
         </div>
         <div id="irRes" class="pick-list" hidden></div>
+        ${(() => { const sug = APP.productos.filter((p) => p.activo && !entrada(p.id) && APP.stockEstado(p) !== 'ok').slice(0, 6); return sug.length ? `<section class="stack-sm" id="irSug"><h2 class="small" style="font-weight:800">Se está acabando · toca para sumarle</h2><div class="pick-list">${sug.map((p) => APP.productoItem(p)).join('')}</div></section>` : ''; })()}
         <div class="stack" id="irLote">${lote.length ? lote.map(tarjeta).join('') : `<div class="card empty">${icon('package', 'lg')}<p>Busca o escanea un producto. Le pones cuántas piezas llegaron (por color o diseño si tiene) y al final lo guardas todo junto.</p></div>`}</div>
         <div class="lote-bar"><span class="small muted" aria-live="polite"><b class="num" id="irTot">${totalLote()}</b> piezas por sumar</span><button type="button" class="btn green" id="irGuardar" ${totalLote() ? '' : 'disabled'}>${icon('check')} Sumar al inventario</button></div>`;
       enlazar();
@@ -379,8 +380,10 @@
     }
     function enlazar() {
       const q = main.querySelector('#irQ'), res = main.querySelector('#irRes');
+      main.querySelectorAll('#irSug [data-id]').forEach((b) => b.addEventListener('click', () => { agregarALote(b.dataset.id); pintar(); }));
       const mostrar = () => {
-        const txt = q.value.trim(); if (!txt) { res.hidden = true; return; }
+        const txt = q.value.trim(); const sg = main.querySelector('#irSug'); if (sg) sg.hidden = !!txt;
+        if (!txt) { res.hidden = true; return; }
         const lista = APP.productos.filter((p) => APP.matchProducto(p, txt)).slice(0, 8);
         res.hidden = false;
         res.innerHTML = lista.length ? lista.map((p) => APP.productoItem(p)).join('') : `<div class="empty"><p>No encontré «${esc(txt)}».</p><button type="button" class="btn sm" data-crear>Crear «${esc(txt)}» ahora</button></div>`;

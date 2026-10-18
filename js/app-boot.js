@@ -91,6 +91,8 @@
       else if (accion === 'etiquetas' && APP.isAdmin()) location.hash = '#/etiquetas';
     }
     await APP.render(true);
+    const llave = 'vedith-recorrido-' + (APP.isAdmin() ? 'a' : 'v');
+    if (!U.lsGet(llave, false) && !accion) { U.lsSet(llave, true); setTimeout(APP.openHelp, 700); }
     if (accion === 'buscar') APP.openSearch();
     if (accion === 'escanear') APP.openScanner();
     // Refresco cada 45 s: datos y globito de avisos. Nunca pisa lo que estás escribiendo.

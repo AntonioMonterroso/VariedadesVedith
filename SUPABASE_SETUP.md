@@ -111,6 +111,8 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 4. **Espacio**: en **Ajustes → Espacio de fotos** hay una barra con lo usado y lo que queda (fotos + catálogos; el plan gratis da 1 GB). Avisa desde el 80 % y no deja subir más al llegar al 98 %. **Liberar fotos sin usar** borra del almacenamiento las que ningún producto usa; al borrar un producto para siempre también se borran sus fotos.
 5. **Menú**: abajo quedan Inventario, Vender, Recibir y Más. Todo lo demás está en «Más», en grupos (Mi día, Mercadería, Dinero, Compartir, Privado, Sistema). «Ingreso rápido» ahora es **Recibí mercadería**, «Campaña» es **Tanda** y «Pendientes de completar» es **Falta foto o precio**.
 
+6. **Vender con fotos**: debajo de la venta salen todos los productos con su foto y «Quedan N»; se toca la foto para agregar (si tiene estilos, pregunta cuál). **Recibir** sugiere arriba los que se están acabando. La primera vez que alguien entra sale una ayuda corta de «lo básico en 3 toques».
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 
