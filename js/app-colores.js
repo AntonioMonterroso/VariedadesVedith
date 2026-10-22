@@ -332,7 +332,7 @@
       try {
         if (st.tanda) U.lsSet('vedith-campana', st.tanda);
         const id = await API.saveProducto({ nombre: st.nombre, categoria_id: st.cat || null, precio: st.precio, costo: st.costo || 0, cantidad: st.usa ? 0 : st.cant, stock_minimo: 2, activo: true, fotos: st.foto ? [st.foto] : [], usa_colores: st.usa, colores, avisar_stock: false, campana: st.tanda });
-        await APP.refreshCore(); m.close(); toast(`«${st.nombre}» creado`);
+        await APP.refreshCore(); m.close(); toast(`«${st.nombre}» creado. Ya está en el inventario.`, { ms: 7000, action: { label: 'Ver', fn: () => APP.go('inventario') } });
         if (opts.onCreated) opts.onCreated(id); else APP.render();
       } catch (e) { btn.disabled = false; APP.handleErr(e); }
     }
@@ -483,7 +483,7 @@
         const n = await API.ingresoRapido(items);
         const resumen = lote.map((e) => APP.prod(e.pid)).filter(Boolean).map((p) => p.nombre);
         lote.length = 0; await APP.refreshCore();
-        toast(`Listo: se sumaron ${n} piezas a ${resumen.length} ${resumen.length === 1 ? 'producto' : 'productos'}.`, { ms: 4500 });
+        toast(`Listo: se sumaron ${n} piezas a ${resumen.length} ${resumen.length === 1 ? 'producto' : 'productos'}.`, { ms: 7000, action: { label: 'Ver inventario', fn: () => APP.go('inventario') } });
         pintar();
       } catch (e) { btn.disabled = false; APP.handleErr(e); }
     }

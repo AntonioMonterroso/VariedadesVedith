@@ -138,6 +138,8 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
    - Pestaña **Resumen**: qué se entrega más (con barras) y mes por mes lo entregado, lo cobrado, los gastos y lo que te sobra.
    Sigue siendo privado y sin cambios en Supabase.
 
+6. **«¿Cómo se hace?»** en cada pantalla (arriba, junto al título): abre 2 a 4 pasos cortos de esa pantalla. Y al guardar algo, el aviso dice qué pasó y ofrece el siguiente paso (por ejemplo «Ver inventario»).
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

@@ -1019,3 +1019,5 @@ button.action { font: inherit; color: inherit; cursor: pointer; }
 .item.hecho { opacity: .6; } .item.hecho .t1 { text-decoration: line-through; } .item.hecho .paso-n { background: #2e9e5b; color: #fff; }
 .item.sig .paso-n { background: var(--pink-600); color: #fff; }
 .pasos { margin-bottom: 12px; }
+.ayuda-btn { align-self: flex-start; }
+.ayuda-pasos { margin: 0; padding-left: 22px; display: grid; gap: 10px; font-size: 1.02rem; line-height: 1.4; }

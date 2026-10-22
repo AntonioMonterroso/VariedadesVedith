@@ -260,6 +260,37 @@
     return { id, params: new URLSearchParams(qs || '') };
   };
   APP.go = (id) => { location.hash = '#/' + id; };
+  /* ---------- ayuda de cada pantalla: «¿Cómo se hace?» ---------- */
+  const AYUDAS = {
+    inventario: ['Mi inventario', ['Aquí ves todo lo que tienes, con su foto y cuántas piezas hay.', 'Toca un producto para ver cuántos hay de cada estilo (diseño o color).', 'Si se equivocó el conteo, abre el producto y corrige con − y +.', 'Arriba: «Nuevo» crea un producto y «Recibí mercadería» suma lo que llegó.']],
+    vender: ['Vender', ['Toca la foto de lo que se lleva la clienta (o búscalo arriba).', 'Si tiene estilos, elige cuál.', 'Elige si pagó al contado o queda fiado.', 'Toca «Registrar venta». El inventario baja solo.']],
+    ingreso: ['Recibí mercadería', ['Busca lo que llegó escribiendo su nombre o escaneando su QR. Si es nuevo, toca «Es un producto nuevo».', 'Pon cuántas piezas llegaron de cada estilo.', 'Toca «Sumar al inventario».']],
+    productos: ['Administrar productos', ['Aquí editas, ocultas o archivas productos.', 'Filtra por tanda para ver lo de una campaña.', 'Al terminar una tanda, «Archivar esta tanda» guarda todo junto y lo puedes deshacer.']],
+    etiquetas: ['Etiquetas QR', ['Marca los productos que quieres imprimir.', 'Elige si quieres una etiqueta por producto o por cada diseño o color.', 'Escoge el tamaño de la etiqueta y de la hoja. Te dice cuántas caben.', 'Toca «Imprimir» y luego marca que salieron bien.']],
+    tienda: ['Mi catálogo', ['Es una página con todos tus productos para que tus clientas los vean.', 'Toca «Compartir por WhatsApp» y mándales el enlace.', 'Ellas arman su pedido y te llega por WhatsApp ya escrito.', 'Lo que ocultes o archives deja de verse solo.']],
+    cajas: ['Cajas (pedidos)', ['Anota cada pedido que le haces a Tupperware con lo que trae.', 'Cuando llegue la caja, márcala como recibida: las piezas se suman al inventario.', 'Marca cuándo la pagaste y de qué cuenta salió el dinero.']],
+    dinero: ['Dinero y depósitos', ['Aquí está el dinero que tienes en efectivo y en cada banco.', 'Cuando llevas efectivo al banco, regístralo como depósito.']],
+    cobrar: ['Por cobrar', ['Son las ventas fiadas que todavía no te pagan.', 'Toca una para registrar un abono o recordarle el pago por WhatsApp.']],
+    ventas: ['Ventas', ['Todo lo vendido, con quién vendió y cómo pagó.', 'Si una venta estuvo mal, ábrela y anúlala: las piezas vuelven al inventario.']],
+    'mis-ventas': ['Mis ventas', ['Aquí ves lo que tú has vendido.']],
+    pendientes: ['Falta foto o precio', ['Son productos a los que todavía les falta algo para verse bien.', 'Toca uno, ponle su precio y su foto, y listo.']],
+    dulces: ['Dulces', ['«+ Entrega»: anota qué entregaste, a quién y lo que gastaste.', '«Cobré» o «Registrar pago» cuando te paguen. «Repetir» copia una entrega anterior.', 'El comprobante para la clienta no lleva gastos ni ganancias.', 'Esta sección es privada: nadie más la ve.']],
+    gastos: ['Gastos', ['Anota lo que gastas en el negocio para saber cuánto ganas de verdad.']],
+    reportes: ['Reportes', ['Elige las fechas para ver lo vendido y lo ganado.', 'Puedes bajarlo a Excel.']],
+    estados: ['Imágenes para estados', ['Elige un producto y un estilo de imagen.', 'Se crea una imagen lista para subir a tus estados de WhatsApp.']],
+    catalogos: ['Catálogo de Tupperware', ['Sube el PDF del catálogo de la campaña y se convierte en un librito para compartir.', 'Al terminar la campaña, archívalo: se borran las hojas y ahorras espacio.']],
+    ajustes: ['Ajustes', ['Aquí cambias el tamaño de la letra, activas el Modo fácil, ves el espacio de fotos y cambias los PIN.']],
+    inicio: ['Resumen del día', ['«Qué hacer hoy» te dice lo más importante. Toca cada línea para ir directo.', 'Abajo ves lo vendido hoy y este mes.']],
+    notificaciones: ['Notificaciones', ['Aquí ves los avisos, por ejemplo cada venta.', 'Toca «Activar avisos» para que también lleguen al teléfono.']]
+  };
+  APP.botonAyuda = function (main, id) {
+    const a = AYUDAS[id]; const cab = main.querySelector('.page-head');
+    if (!a || !cab || cab.querySelector('.ayuda-btn')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn ghost sm ayuda-btn'; b.innerHTML = `${icon('help', 'sm')} ¿Cómo se hace?`;
+    b.addEventListener('click', () => openModal({ title: a[0], body: `<p class="muted">Paso a paso:</p><ol class="ayuda-pasos">${a[1].map((t) => `<li>${esc(t)}</li>`).join('')}</ol>`, footer: '<button type="button" class="btn" data-ok>Entendido</button>' }).foot.querySelector('[data-ok]').addEventListener('click', () => U.closeAllModals()));
+    cab.appendChild(b);
+  };
   APP.render = async function (animar) {
     if (!APP.user) return;
     let { id, params } = APP.route();
@@ -272,6 +303,7 @@
     const main = APP.$('#main');
     main.innerHTML = '<div class="empty muted">Cargando…</div>';
     try { await page(main, params); } catch (e) { APP.handleErr(e); main.innerHTML = `<div class="empty">${icon('alert', 'lg')}<p>No se pudo cargar esta pantalla.</p><button class="btn secondary" onclick="location.reload()">Reintentar</button></div>`; }
+    APP.botonAyuda(main, id);
     if (animar === true) { main.classList.remove('page-in'); void main.offsetWidth; main.classList.add('page-in'); }
     window.scrollTo({ top: 0 });
   };
