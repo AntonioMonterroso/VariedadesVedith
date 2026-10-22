@@ -126,6 +126,18 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 ## 16. Mi catálogo (tus productos para compartir)
 **Más → Mi catálogo** da un enlace, un QR y el botón de WhatsApp. Es distinto del catálogo de Tupperware (librito): aquí salen **todos tus productos registrados**, con foto, precio, estilos y si están disponibles. La clienta busca, filtra por categoría, elige el diseño o color, arma **su pedido** y te lo manda por WhatsApp ya escrito. Siempre está al día (no hay que subir nada) y no muestra costos ni códigos de Tupperware. Los productos ocultos o archivados no salen. No necesita ningún SQL nuevo. El enlace usa la dirección de Ajustes → «Dirección de la app».
 
+## 17. Más fácil de entender, y Dulces mejorado
+1. **Mismas palabras en todo el panel**: estilo, tanda, tengo, se está acabando, agotado.
+2. **Resumen del día → «Qué hacer hoy»**: una lista corta de pendientes con un toque cada uno (deudas vencidas, agotados, cajas sin pagar, dulces por cobrar, productos sin foto o precio, etiquetas por imprimir). Si no hay nada dice «Todo en orden».
+3. **Primeros pasos** (en Inventario, solo administración): agrega un producto, ponle foto, imprime su etiqueta, haz una venta. Se tacha sola y se puede ocultar.
+4. **Ajustes → Cómo se ve y se usa**: **tamaño de letra** (normal, grande, extra grande) y **Modo fácil**, que esconde del menú Dinero, Gastos, Reportes, Notificaciones y el catálogo de Tupperware.
+5. **Dulces**:
+   - «Para cobrar primero»: las 3 entregas con saldo, de la más antigua a la más nueva, con botón **Cobré** (registra el pago) y botón de **recordatorio por WhatsApp** ya escrito.
+   - En cada entrega: **Repetir** (nueva entrega con lo mismo, a precio y cantidad de la anterior) y **Recordar**.
+   - Al buscar a un cliente sale «Nueva entrega para …».
+   - Pestaña **Resumen**: qué se entrega más (con barras) y mes por mes lo entregado, lo cobrado, los gastos y lo que te sobra.
+   Sigue siendo privado y sin cambios en Supabase.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

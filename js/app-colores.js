@@ -57,7 +57,7 @@
     const cs = p.colores || [], d = cs.some((c) => c.diseno), t = cs.some((c) => c.tono || !c.diseno);
     return d && t ? 'opcion' : d ? 'diseno' : 'color';
   };
-  const TXT = { color: ['Colores', '¿De qué color?', 'color'], diseno: ['Diseños', '¿Qué diseño?', 'diseño'], opcion: ['Opciones', '¿Cuál opción?', 'opción'] };
+  const TXT = { color: ['Colores', '¿De qué color?', 'color'], diseno: ['Diseños', '¿Qué diseño?', 'diseño'], opcion: ['Estilos', '¿Cuál estilo?', 'estilo'] };
   APP.textoVar = (p) => TXT[APP.etiquetaVar(p)];
   APP.dots = (p, max = 6) => {
     if (!(p.usa_colores && p.colores && p.colores.length)) return '';
@@ -416,7 +416,7 @@
             <div class="stepper" role="group" aria-label="Piezas"><button type="button" data-minus aria-label="Menos">${icon('minus')}</button><input type="number" inputmode="numeric" min="0" value="${n || ''}" placeholder="0" data-cant aria-label="Piezas"><button type="button" data-plus aria-label="Más">${icon('plus')}</button></div>
             <button type="button" class="chip" data-mas5 aria-label="Sumar 5">+5</button></div>`;
         }).join('')}
-          ${p.usa_colores ? `<button type="button" class="btn ghost sm" data-nuevocolor style="justify-self:start">${icon('plus', 'sm')} Opción nueva</button>` : ''}</div></section>`;
+          ${p.usa_colores ? `<button type="button" class="btn ghost sm" data-nuevocolor style="justify-self:start">${icon('plus', 'sm')} Estilo nuevo</button>` : ''}</div></section>`;
     }
     function enlazar() {
       const q = main.querySelector('#irQ'), res = main.querySelector('#irRes');
@@ -451,11 +451,11 @@
       });
       main.querySelector('#irGuardar').addEventListener('click', guardar);
     }
-    // Opción nueva: un diseño, un color, o los dos juntos
+    // Estilo nuevo: un diseño, un color, o los dos juntos
     function opcionNueva(p, e) {
       let dSel = '', tSel = [], hSel = [];
       const disUsados = [...new Set(p.colores.map((c) => c.diseno).filter(Boolean))];
-      const m = openModal({ title: 'Opción nueva', body: `<p class="muted small">${esc(p.nombre)} · elige un diseño, un color o los dos</p>
+      const m = openModal({ title: 'Estilo nuevo', body: `<p class="muted small">${esc(p.nombre)} · elige un diseño, un color o los dos</p>
         ${API._variantes === false ? '' : '<div class="stack-sm"><b class="small">Diseño</b>'}<div class="chips" style="flex-wrap:wrap;overflow:visible" ${API._variantes === false ? 'hidden' : ''}>${[...new Set([...disUsados, ...APP.presetsDiseno()])].map((n) => `<button type="button" class="chip" data-d="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join('')}</div>
           <input class="input" id="onD" maxlength="30" placeholder="O escribe otro diseño" ${API._variantes === false ? 'hidden' : ''}>${API._variantes === false ? '' : '</div>'}
         <div class="stack-sm"><b class="small">Color <span class="muted" style="font-weight:600">· toca varios si lleva más de uno</span></b><div class="chips" style="flex-wrap:wrap;overflow:visible">${APP.presetsColor().map(([n, h]) => `<button type="button" class="chip col-chip" data-t="${esc(n)}" data-h="${esc(h)}" aria-pressed="false">${APP.dot(n, h)}${esc(n)}</button>`).join('')}</div>

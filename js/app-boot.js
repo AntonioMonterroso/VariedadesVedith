@@ -80,6 +80,7 @@
      ===================================================================== */
   async function startApp() {
     window.onkeydown = null;
+    APP.aplicarLetra();
     APP.buildShell();
     document.getElementById('main').innerHTML = '<div class="empty muted">Cargando…</div>';
     try { await APP.refreshCore(); } catch (e) { APP.handleErr(e); }

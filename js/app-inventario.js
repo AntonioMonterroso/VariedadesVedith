@@ -144,12 +144,29 @@
   }
   const stepper = (n) => `<div class="stepper" role="group" aria-label="Piezas"><button type="button" data-minus aria-label="Menos">${icon('minus')}</button><input type="number" inputmode="numeric" min="0" value="${Number(n) || 0}" data-cant aria-label="Piezas"><button type="button" data-plus aria-label="Más">${icon('plus')}</button></div>`;
 
+  // Guía de primeros pasos: se va tachando sola y desaparece cuando todo está hecho
+  function pasosHtml() {
+    if (U.lsGet('vedith-pasos-ok', false)) return '';
+    const pasos = [
+      { ok: APP.productos.length > 0, t: 'Agrega tu primer producto', h: '#/inventario', btn: 'nuevo' },
+      { ok: APP.productos.some((p) => p.fotos && p.fotos.length), t: 'Ponle foto a un producto', h: '#/pendientes' },
+      { ok: APP.productos.some((p) => p.etiqueta_impresa_at), t: 'Imprime su etiqueta QR', h: '#/etiquetas' },
+      { ok: !!U.lsGet('vedith-vendio', false), t: 'Haz tu primera venta', h: '#/vender' }
+    ];
+    const hechos = pasos.filter((x) => x.ok).length;
+    if (hechos === pasos.length) { U.lsSet('vedith-pasos-ok', true); return ''; }
+    const sig = pasos.findIndex((x) => !x.ok);
+    return `<section class="card pasos"><div class="row between"><h2>Primeros pasos · ${hechos} de ${pasos.length}</h2><button type="button" class="btn ghost sm" id="pasosOcultar">Ocultar</button></div>
+      <div class="pasos-bar"><i style="width:${(hechos / pasos.length) * 100}%"></i></div>
+      <div class="list">${pasos.map((x, i) => `<${x.btn ? 'button type="button" id="pasoNuevo"' : 'a href="' + x.h + '"'} class="item ${x.ok ? 'hecho' : i === sig ? 'sig' : ''}"><span class="paso-n">${x.ok ? icon('check', 'sm') : i + 1}</span><span class="grow t1">${x.t}</span>${x.ok ? '' : icon('chevron', 'sm')}</${x.btn ? 'button' : 'a'}>`).join('')}</div></section>`;
+  }
+
   P.inventario = async function (main) {
     const ad = isAdmin();
     main.innerHTML = `
       <div class="page-head"><div><h1>Mi inventario</h1><p class="sub" id="invSub"></p></div>
         ${ad ? `<div class="row inv-btns"><button type="button" class="btn secondary" id="invNuevo">${icon('plus')} Nuevo</button><a class="btn" href="#/ingreso">${icon('package')} Recibí mercadería</a></div>` : ''}</div>
-      <div id="invKpi"></div><div id="invAviso"></div>
+      ${ad ? pasosHtml() : ''}<div id="invKpi"></div><div id="invAviso"></div>
       <div class="toolbar">
         <div class="searchbox">${icon('search')}<input class="input" id="invQ" type="search" placeholder="Buscar por nombre o código…" autocomplete="off" value="${esc(INV.q)}"></div>
         <div class="chips" id="invF" role="group" aria-label="Filtro">
@@ -238,6 +255,8 @@
     P.inventario.paint = paint;
     main.querySelectorAll('#invV [data-v]').forEach((b) => b.addEventListener('click', () => { INV.vista = b.dataset.v; U.lsSet('vedith-vista', INV.vista); main.querySelectorAll('#invV button').forEach((x) => x.setAttribute('aria-pressed', x === b)); paint(); }));
     const nv = main.querySelector('#invNuevo'); if (nv) nv.addEventListener('click', () => APP.productoRapido());
+    const pn = main.querySelector('#pasoNuevo'); if (pn) pn.addEventListener('click', () => APP.productoRapido());
+    const po = main.querySelector('#pasosOcultar'); if (po) po.addEventListener('click', () => { U.lsSet('vedith-pasos-ok', true); main.querySelector('.pasos').remove(); });
     pintarTandas(); paint();
     main.querySelector('#invQ').addEventListener('input', U.debounce((e) => { INV.q = e.target.value; paint(); }, 120));
     main.querySelectorAll('#invF [data-f]').forEach((b) => b.addEventListener('click', () => { INV.f = b.dataset.f; main.querySelectorAll('#invF .chip').forEach((x) => x.setAttribute('aria-pressed', x === b)); paint(); }));

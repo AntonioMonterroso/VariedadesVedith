@@ -43,22 +43,27 @@
     const sinEtiq = activos.filter((p) => !p.etiqueta_impresa_at);
     const pend = APP.pendientes ? APP.pendientes() : [];
     const piezasTot = activos.reduce((s, p) => s + p.cantidad, 0), agotN = activos.filter((p) => APP.stockEstado(p) === 'agotado').length, okN = activos.length - bajos.length;
+    const tareas = [
+      vencidas ? { i: 'alert', mal: 1, t: `${vencidas} ${vencidas === 1 ? 'deuda vencida' : 'deudas vencidas'}`, d: 'Toca para ver quién debe', h: '#/cobrar' } : null,
+      agotN ? { i: 'package', mal: 1, t: `${agotN} ${agotN === 1 ? 'producto agotado' : 'productos agotados'}`, d: 'Mira qué reponer', h: '#/inventario' } : null,
+      cajasSinPagar.length ? { i: 'box', t: `${cajasSinPagar.length} ${cajasSinPagar.length === 1 ? 'caja sin pagar' : 'cajas sin pagar'}`, d: `${money(cajasSinPagar.reduce((s, c) => s + c.monto_total, 0))} por pagar a Tupperware`, h: '#/cajas' } : null,
+      dulcesDeben > 0.004 ? { i: 'lock', t: `Dulces: te deben ${money(dulcesDeben)}`, d: 'Gelatinas y gomitas por cobrar', h: '#/dulces' } : null,
+      pend.length ? { i: 'camera', t: `${pend.length} ${pend.length === 1 ? 'producto' : 'productos'} sin foto o precio`, d: 'Complétalos para que se vean bien', h: '#/pendientes' } : null,
+      sinEtiq.length ? { i: 'qr', t: `${sinEtiq.length} ${sinEtiq.length === 1 ? 'etiqueta' : 'etiquetas'} por imprimir`, d: 'Para pegar en tus productos', h: '#/etiquetas' } : null
+    ].filter(Boolean);
+    const tareasHoy = `<section class="card hoy"><h2>Qué hacer hoy</h2>${tareas.length ? `<div class="list">${tareas.map((x) => `<a class="item" href="${x.h}"><span class="thumb hoy-ic ${x.mal ? 'mal' : ''}">${icon(x.i)}</span><span class="grow"><div class="t1">${x.t}</div><div class="t2">${x.d}</div></span>${icon('chevron', 'sm')}</a>`).join('')}</div>` : `<p class="muted" style="display:flex;gap:8px;align-items:center">${icon('check')} Todo en orden. No hay nada urgente.</p>`}</section>`;
     const hora = new Date().getHours();
     const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
 
     main.innerHTML = `
       <div class="page-head"><div><h1>${saludo}</h1><p class="sub">Así va Vedith Variedades hoy.</p></div></div>
       <div class="stack">
-        ${sinEtiq.length ? `<a class="banner" href="#/etiquetas" style="text-decoration:none;color:inherit">${icon('qr')}<span class="grow"><b>${sinEtiq.length} ${sinEtiq.length === 1 ? 'producto sin' : 'productos sin'} etiqueta QR impresa.</b> <span class="small muted">Toca para imprimirlas.</span></span>${icon('chevron', 'sm')}</a>` : ''}
-        ${pend.length ? `<a class="banner" href="#/pendientes" style="text-decoration:none;color:inherit">${icon('alert')}<span class="grow"><b>${pend.length} ${pend.length === 1 ? 'producto pendiente' : 'productos pendientes'} de completar.</b> <span class="small muted">Les falta precio o foto.</span></span>${icon('chevron', 'sm')}</a>` : ''}
-        ${dulcesDeben > 0.004 ? `<a class="banner" href="#/dulces" style="text-decoration:none;color:inherit">${icon('lock')}<span class="grow"><b>Dulces: te deben ${money(dulcesDeben)}.</b> <span class="small muted">Gelatinas y gomitas por cobrar.</span></span>${icon('chevron', 'sm')}</a>` : ''}
-        ${cajasSinPagar.length ? `<a class="banner" href="#/cajas" style="text-decoration:none;color:inherit">${icon('box')}<span class="grow"><b>${cajasSinPagar.length} ${cajasSinPagar.length === 1 ? 'caja sin pagar' : 'cajas sin pagar'}</b> <span class="small muted">· ${money(cajasSinPagar.reduce((s, c) => s + c.monto_total, 0))} por pagar a Tupperware.</span></span>${icon('chevron', 'sm')}</a>` : ''}
-        ${vencidas ? `<a class="banner bad" href="#/cobrar" style="text-decoration:none;color:inherit">${icon('alert')}<span class="grow"><b>${vencidas} ${vencidas === 1 ? 'deuda vencida' : 'deudas vencidas'}.</b> <span class="small muted">Toca para ver quién debe.</span></span>${icon('chevron', 'sm')}</a>` : ''}
+        ${tareasHoy}
         <div class="kpis">
           <div class="kpi pink"><span class="k-l">Vendido hoy</span><span class="k-v num">${money(sum(deHoy))}</span><span class="small muted">${deHoy.length} ${deHoy.length === 1 ? 'venta' : 'ventas'}</span></div>
           <div class="kpi green"><span class="k-l">Vendido este mes</span><span class="k-v num">${money(sum(delMes))}</span><span class="small muted">${delMes.length} ${delMes.length === 1 ? 'venta' : 'ventas'}</span></div>
           <a class="kpi orange" href="#/cobrar" style="text-decoration:none;color:inherit"><span class="k-l">Por cobrar</span><span class="k-v num">${money(porCobrar)}</span><span class="small muted">${deudas.length} ${deudas.length === 1 ? 'deuda' : 'deudas'}</span></a>
-          <a class="kpi" href="#/productos?f=stock" style="text-decoration:none;color:inherit"><span class="k-l">Poco o sin stock</span><span class="k-v num">${bajos.length}</span><span class="small muted">de ${activos.length} productos</span></a>
+          <a class="kpi" href="#/productos?f=stock" style="text-decoration:none;color:inherit"><span class="k-l">Por acabarse o agotados</span><span class="k-v num">${bajos.length}</span><span class="small muted">de ${activos.length} productos</span></a>
         </div>
         <a class="card pano" href="#/inventario" style="text-decoration:none;color:inherit">
           <div class="row between"><h2>Mi inventario</h2><span class="small muted">Ver todo ${icon('chevron', 'sm')}</span></div>
@@ -369,7 +374,7 @@
             cliente_nombre: f.cliente.trim(), cliente_telefono: f.tel, fecha_limite: f.forma === 'fiado' ? f.limite || null : null,
             precio: l.precio, metodo_cobro: f.forma === 'contado' ? f.metodo : null, cuenta_id: f.forma === 'contado' && f.metodo !== 'efectivo' ? f.cuenta : null
           });
-          hechas.push(r); APP.cart = APP.cart.filter((x) => x !== l);
+          U.lsSet('vedith-vendio', true); hechas.push(r); APP.cart = APP.cart.filter((x) => x !== l);
         } catch (e) { fallas.push({ nombre: p ? p.nombre : 'Producto', msg: APP.errMsg(e) }); if ((e.message || '').includes('NO_AUTORIZADO')) return APP.handleErr(e); }
       }
       try { await APP.refreshCore(); } catch (_) {}

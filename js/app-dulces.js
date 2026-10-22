@@ -74,12 +74,50 @@
         <div class="kpi"><span class="k-l">Gastos este mes</span><span class="k-v num">${money(gasMes)}</span></div>
         <div class="kpi ${entMes - gasMes >= 0 ? 'green' : 'orange'}"><span class="k-l">Te sobra este mes</span><span class="k-v num">${money(entMes - gasMes)}</span><span class="small muted">entregado − gastos</span></div>
       </div>
-      <div class="seg" role="group" aria-label="Vista" style="margin-bottom:12px"><button type="button" data-v="entregas" aria-pressed="${S.vista === 'entregas'}">Entregas</button><button type="button" data-v="clientes" aria-pressed="${S.vista === 'clientes'}">Por cliente</button></div>
+      ${panelCobrar()}
+      <div class="seg" role="group" aria-label="Vista" style="margin-bottom:12px"><button type="button" data-v="entregas" aria-pressed="${S.vista === 'entregas'}">Entregas</button><button type="button" data-v="clientes" aria-pressed="${S.vista === 'clientes'}">Por cliente</button><button type="button" data-v="resumen" aria-pressed="${S.vista === 'resumen'}">Resumen</button></div>
       <div id="dCuerpo"></div>`;
     main.querySelector('#dNueva').addEventListener('click', () => formEntrega(main));
     main.querySelector('#dProd').addEventListener('click', () => productos(main));
     main.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => { S.vista = b.dataset.v; paint(main); }));
-    S.vista === 'entregas' ? listaEntregas(main) : listaClientes(main);
+    main.querySelectorAll('[data-cobro]').forEach((b) => b.addEventListener('click', () => { const e = S.entregas.find((x) => x.id === b.dataset.cobro); if (e) formPago(main, e); }));
+    main.querySelectorAll('[data-recordar]').forEach((b) => b.addEventListener('click', () => { const e = S.entregas.find((x) => x.id === b.dataset.recordar); if (e) recordar(e); }));
+    S.vista === 'entregas' ? listaEntregas(main) : S.vista === 'clientes' ? listaClientes(main) : resumen(main);
+  }
+
+  // Lo que más urge: las entregas con saldo, de la más antigua a la más nueva
+  function panelCobrar() {
+    const deben = S.entregas.filter((e) => saldo(e) > 0.004).sort((a, b) => a.fecha.localeCompare(b.fecha)).slice(0, 3);
+    if (!deben.length) return S.entregas.length ? `<div class="banner info" style="margin-bottom:14px">${icon('check')}<span class="small"><b>Todo cobrado.</b> Nadie te debe por ahora.</span></div>` : '';
+    return `<section class="card stack-sm" style="margin-bottom:14px"><h2 class="small" style="font-weight:800">Para cobrar primero</h2>
+      ${deben.map((e) => { const dias = Math.max(0, Math.floor((Date.now() - new Date(e.fecha + 'T12:00:00')) / 86400000)); return `<div class="row" style="gap:10px;align-items:center">
+        <div class="grow" style="min-width:0"><div class="t1 ellipsis">${esc(e.cliente)}</div><div class="t2">debe <b>${money(saldo(e))}</b> · hace ${dias} ${dias === 1 ? 'día' : 'días'}</div></div>
+        <button type="button" class="btn secondary sm" data-recordar="${esc(e.id)}" aria-label="Recordar a ${esc(e.cliente)}">${icon('chat', 'sm')}</button>
+        <button type="button" class="btn green sm" data-cobro="${esc(e.id)}">Cobré</button></div>`; }).join('')}</section>`;
+  }
+  // Mensaje de WhatsApp para recordar un pago (sin número: se elige el contacto al abrir WhatsApp)
+  function recordar(e) {
+    const txt = `Hola ${e.cliente}, te recuerdo el pago de las ${e.items.map((i) => TIPO[i.tipo].toLowerCase()).filter((v, i, a) => a.indexOf(v) === i).join(' y ')} que te entregué el ${fmtDate(e.fecha)}. ${pagado(e) > 0 ? `Llevas pagado ${money(pagado(e))} y faltan ${money(saldo(e))}.` : `Son ${money(saldo(e))}.`} ¡Gracias!`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+  }
+
+  // Resumen: qué se entrega más y cómo va cada mes
+  function resumen(main) {
+    const meses = {};
+    S.entregas.forEach((e) => { const k = e.fecha.slice(0, 7); const m = meses[k] = meses[k] || { ent: 0, gas: 0, cob: 0, n: 0 }; m.ent += total(e); m.gas += gasto(e); m.cob += pagado(e); m.n += piezas(e); });
+    const filasM = Object.entries(meses).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6);
+    const prods = {};
+    S.entregas.forEach((e) => e.items.forEach((i) => { const p = prods[i.nombre] = prods[i.nombre] || { tipo: i.tipo, n: 0, t: 0 }; p.n += i.cantidad; p.t += i.cantidad * Number(i.precio_unitario); }));
+    const filasP = Object.entries(prods).sort((a, b) => b[1].n - a[1].n);
+    const maxN = Math.max(1, ...filasP.map(([, p]) => p.n));
+    const nombreMes = (k) => { const t = new Date(k + '-15T12:00:00').toLocaleDateString('es-GT', { month: 'long', year: 'numeric' }).replace(' de ', ' '); return t.charAt(0).toUpperCase() + t.slice(1); };
+    main.querySelector('#dCuerpo').innerHTML = S.entregas.length ? `
+      <section class="stack-sm"><h2 class="small" style="font-weight:800">Lo que más entregas</h2>
+        <div class="card stack-sm">${filasP.map(([n, p]) => `<div><div class="row between"><span class="t1">${esc(n)}</span><span class="small muted"><b class="num">${p.n}</b> piezas · ${money(p.t)}</span></div><div class="pano-bar" style="height:8px;margin-top:4px"><i class="${p.tipo === 'gelatina' ? 'ok' : 'warn'}" style="flex:${p.n}"></i><i style="flex:${maxN - p.n};background:transparent"></i></div></div>`).join('')}</div></section>
+      <section class="stack-sm" style="margin-top:14px"><h2 class="small" style="font-weight:800">Mes por mes</h2>
+        <div class="list">${filasM.map(([k, m]) => `<div class="item"><span class="grow"><div class="t1">${nombreMes(k)}</div><div class="t2">${m.n} piezas · entregado ${money(m.ent)} · cobrado ${money(m.cob)} · gastos ${money(m.gas)}</div></span>
+          <span style="text-align:right"><div class="amt num" style="color:${m.ent - m.gas >= 0 ? 'var(--green-700)' : 'var(--red-600)'}">${money(m.ent - m.gas)}</div><div class="xs muted">te sobra</div></span></div>`).join('')}</div></section>`
+      : '<div class="card empty">Aún no hay entregas para resumir.</div>';
   }
 
   function listaEntregas(main) {
@@ -90,12 +128,14 @@
     cuerpo.innerHTML = `
       <div class="toolbar"><div class="searchbox">${icon('search')}<input class="input" id="dQ" type="search" placeholder="Buscar por cliente…" autocomplete="off" value="${esc(S.q)}"></div>
         <div class="chips" role="group" aria-label="Filtro">${[['todas', 'Todas'], ['cobrar', 'Por cobrar'], ['pagadas', 'Pagadas']].map(([k, l]) => `<button type="button" class="chip" data-f="${k}" aria-pressed="${S.filtro === k}">${l}</button>`).join('')}</div></div>
+      ${norm && lista.length && lista.every((x) => U.norm(x.cliente) === U.norm(lista[0].cliente)) ? `<button type="button" class="btn secondary sm" data-nuevacli style="margin-bottom:10px">${icon('plus', 'sm')} Nueva entrega para ${esc(lista[0].cliente)}</button>` : ''}
       ${lista.length ? `<div class="list">${lista.map((e) => `
         <button type="button" class="item" data-id="${esc(e.id)}"><span class="thumb" style="background:var(--pink-100);color:var(--pink-700)">${icon('receipt')}</span>
           <span class="grow"><div class="t1 ellipsis">${esc(e.cliente)}</div><div class="t2">${fmtDate(e.fecha)} · ${piezas(e)} ${piezas(e) === 1 ? 'pieza' : 'piezas'}</div><div style="margin-top:4px">${pill(e)}</div></span>
           <span style="text-align:right"><div class="amt num">${money(total(e))}</div>${saldo(e) > 0.004 ? `<div class="xs" style="color:var(--red-600);font-weight:800">debe ${money(saldo(e))}</div>` : ''}</span></button>`).join('')}</div>`
         : `<div class="card empty">${icon('receipt', 'lg')}<p>${S.entregas.length ? 'No hay entregas con ese filtro.' : 'Aún no registras entregas. Toca <b>+ Entrega</b> cuando entregues gelatinas o gomitas.'}</p></div>`}`;
     cuerpo.querySelector('#dQ').addEventListener('input', U.debounce((ev) => { S.q = ev.target.value; listaEntregas(main); const i = main.querySelector('#dQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 150));
+    const nc = cuerpo.querySelector('[data-nuevacli]'); if (nc) nc.addEventListener('click', () => formEntrega(main, { ...lista[0], items: lista[0].items, gastos: [], nota: '' }, true));
     cuerpo.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { S.filtro = b.dataset.f; listaEntregas(main); }));
     cuerpo.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => detalle(main, b.dataset.id)));
   }
@@ -125,7 +165,7 @@
       title: e.cliente, wide: true,
       body: `<div class="stack">
         <div class="row between wrap"><span class="muted">${fmtDate(e.fecha)} · ${n} ${n === 1 ? 'pieza' : 'piezas'}</span>${pill(e)}</div>
-        <div class="banner ${cu.clase}">${icon(cu.clase === 'info' ? 'check' : 'alert')}<span class="small"><b>${esc(cu.txt)}</b></span></div>
+        <div class="banner ${cu.clase}">${icon(cu.clase === 'info' ? 'check' : 'alert')}<span class="small grow"><b>${esc(cu.txt)}</b></span>${saldo(e) > 0.004 ? `<button type="button" class="btn secondary sm" data-a="recordar">${icon('chat', 'sm')} Recordar</button>` : ''}</div>
         <section class="stack-sm"><h3>Lo que entregaste</h3>
           <div class="list">${e.items.map((i) => `<div class="item"><span class="grow"><div class="t1">${i.cantidad} × ${esc(i.nombre)}</div><div class="t2">${TIPO[i.tipo]} · ${money(i.precio_unitario)} c/u</div></span><span class="amt num">${money(i.cantidad * i.precio_unitario)}</span></div>`).join('')}
             <div class="item"><span class="grow t1">Total a cobrar</span><span class="amt num">${money(t)}</span></div></div></section>
@@ -139,10 +179,12 @@
             <dt>Ya recuperaste</dt><dd class="num">${money(pagado(e) - g)}</dd></dl>
           <p class="xs muted">«Ya recuperaste» es lo que te han pagado menos lo que gastaste. Esto es solo para ti: no sale en el comprobante.</p></section>
         ${e.nota ? `<p class="small muted">Nota: ${esc(e.nota)}</p>` : ''}</div>`,
-      footer: `<button type="button" class="btn secondary" style="flex:0 0 auto" data-a="borrar" aria-label="Eliminar entrega">${icon('trash')}</button><button type="button" class="btn secondary" data-a="editar">${icon('edit')} Editar</button><button type="button" class="btn" data-a="recibo">${icon('receipt')} Comprobante</button>`
+      footer: `<button type="button" class="btn secondary" style="flex:0 0 auto" data-a="borrar" aria-label="Eliminar entrega">${icon('trash')}</button><button type="button" class="btn secondary" data-a="repetir" title="Nueva entrega con lo mismo">${icon('plus')} Repetir</button><button type="button" class="btn secondary" data-a="editar">${icon('edit')} Editar</button><button type="button" class="btn" data-a="recibo">${icon('receipt')} Comprobante</button>`
     });
     const on = (a, fn) => m.el.querySelectorAll(`[data-a="${a}"]`).forEach((b) => b.addEventListener('click', fn));
     on('editar', () => { m.close(); formEntrega(main, e); });
+    on('repetir', () => { m.close(); formEntrega(main, e, true); });
+    on('recordar', () => recordar(e));
     on('recibo', () => comprobante(e));
     on('pago', () => { m.close(); formPago(main, e); });
     on('borrar', async () => { if (!await confirmDialog({ title: 'Eliminar entrega', message: `Se borra la entrega de ${e.cliente} con sus pagos y gastos. No se puede deshacer.`, okLabel: 'Eliminar', danger: true })) return; try { await API.deleteDulceEntrega(e.id); m.close(); toast('Entrega eliminada'); await cargar(); paint(main); } catch (er) { APP.handleErr(er); } });
@@ -174,18 +216,18 @@
   /* =====================================================================
      FORMULARIO DE ENTREGA (con gastos)
      ===================================================================== */
-  function formEntrega(main, previa) {
-    const nueva = !previa;
+  function formEntrega(main, previa, copia) {
+    const nueva = !previa || !!copia;
     const activos = () => S.productos.filter((p) => p.activo);
     const primero = (tipo) => activos().find((p) => p.tipo === tipo);
     const nuevaLinea = (tipo) => { const p = primero(tipo); return { tipo, producto_id: p ? p.id : '', nombre: p ? p.nombre : '', cantidad: 1, precio_unitario: p ? Number(p.precio_default) : 0 }; };
-    const e = previa ? { ...previa, items: previa.items.map((i) => ({ ...i })), gastos: previa.gastos.map((x) => ({ ...x })) } : { fecha: APP.hoyStr(), cliente: '', nota: '', items: [nuevaLinea('gelatina')], gastos: [] };
+    const e = previa ? { ...previa, ...(copia ? { id: undefined, fecha: APP.hoyStr(), nota: '' } : {}), items: previa.items.map((i) => ({ ...i })), gastos: previa.gastos.map((x) => ({ ...x })) } : { fecha: APP.hoyStr(), cliente: '', nota: '', items: [nuevaLinea('gelatina')], gastos: [] };
     const clientes = [...new Set(S.entregas.map((x) => x.cliente.trim()))].sort();
     const conceptos = [...new Set(S.entregas.flatMap((x) => x.gastos.map((g) => g.concepto.trim())))].sort();
     let pagoMetodo = 'efectivo';
 
     const m = openModal({
-      title: nueva ? 'Entrega nueva' : 'Editar entrega', wide: true,
+      title: copia ? 'Repetir entrega' : nueva ? 'Entrega nueva' : 'Editar entrega', wide: true,
       body: `<div class="stack">
         <div class="grid-2"><label class="field">Cliente *<input class="input" id="enCli" list="enCliList" value="${esc(e.cliente)}" maxlength="80" placeholder="¿A quién se la entregaste?" autocomplete="off" autofocus></label>
           <label class="field">Fecha de entrega<input class="input" id="enFecha" type="date" value="${esc(e.fecha)}"></label></div>

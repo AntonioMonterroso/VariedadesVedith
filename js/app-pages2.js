@@ -438,6 +438,11 @@
     main.innerHTML = `
       <div class="page-head"><div><h1>Ajustes</h1></div></div>
       <div class="stack">
+        <section class="card stack"><h2>Cómo se ve y se usa</h2>
+          <div class="stack-sm"><span class="small" style="font-weight:800">Tamaño de la letra</span>
+            <div class="seg" role="group" aria-label="Tamaño de letra">${[['normal', 'Normal'], ['grande', 'Grande'], ['extra', 'Extra grande']].map(([k, l]) => `<button type="button" data-letra="${k}" aria-pressed="${U.lsGet('vedith-letra', 'normal') === k}">${l}</button>`).join('')}</div></div>
+          <label class="row"><input type="checkbox" id="aFacil" ${APP.facil() ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Modo fácil</b> <span class="small muted">Esconde del menú lo avanzado (dinero, gastos, reportes, avisos y el catálogo de Tupperware). Se vuelve a mostrar al apagarlo.</span></span></label>
+        </section>
         <section class="card stack"><h2>Espacio de fotos</h2><p class="small muted">Las fotos que subes desde el panel se comprimen solas. Aquí ves cuánto espacio queda.</p><div id="aEspacio"></div></section>
         <section class="card stack"><h2>Negocio</h2>
           <label class="field">Nombre<input class="input" id="aNom" value="${esc(c.nombre_negocio || '')}" maxlength="60"></label>
@@ -476,6 +481,8 @@
         <button type="button" class="btn secondary block" id="aSalir">${icon('logout')} Salir</button>
       </div>`;
     APP.medidorEspacio(main.querySelector('#aEspacio'));
+    main.querySelectorAll('[data-letra]').forEach((b) => b.addEventListener('click', () => { U.lsSet('vedith-letra', b.dataset.letra); APP.aplicarLetra(); main.querySelectorAll('[data-letra]').forEach((x) => x.setAttribute('aria-pressed', x === b)); }));
+    main.querySelector('#aFacil').addEventListener('change', (e) => { U.lsSet('vedith-facil', e.target.checked); toast(e.target.checked ? 'Modo fácil activado' : 'Mostrando todas las opciones'); });
     const g = (s) => main.querySelector(s);
     g('#aUsar').addEventListener('click', () => { g('#aUrl').value = new URL('./', location.href).href; });
     g('#aGuardar').addEventListener('click', async () => {

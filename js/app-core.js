@@ -125,7 +125,24 @@
     ];
   }
   // Menú «Más», en grupos con nombres sencillos
+  // Lo avanzado que el «Modo fácil» esconde del menú (sigue disponible al apagarlo)
+  const AVANZADO = ['dinero', 'gastos', 'reportes', 'notificaciones', 'catalogos'];
+  APP.facil = () => !!U.lsGet('vedith-facil', false);
+  APP.aplicarLetra = () => { const t = U.lsGet('vedith-letra', 'normal'); document.documentElement.style.fontSize = t === 'grande' ? '112.5%' : t === 'extra' ? '125%' : ''; };
   function moreItems() {
+    const todo = moreItemsTodos();
+    if (!isAdmin() || !APP.facil()) return todo;
+    let g = '', pendiente = '';
+    const out = [];
+    todo.forEach((n) => {
+      if (n.g) { g = n.g; pendiente = n.g; }
+      if (AVANZADO.includes(n.id)) return;
+      out.push(pendiente ? { ...n, g: pendiente } : { ...n, g: undefined });
+      pendiente = '';
+    });
+    return out;
+  }
+  function moreItemsTodos() {
     return isAdmin() ? [
       { g: 'Mi día', id: 'inicio', label: 'Resumen del día', icon: 'home', d: 'Ventas de hoy y avisos' },
       { id: 'ventas', label: 'Ventas', icon: 'receipt', d: 'Todo lo vendido' },
@@ -208,6 +225,7 @@
       body: `<div class="mo-user"><span class="mo-av">${icon(isAdmin() ? 'lock' : 'users')}</span><div class="grow"><b>${esc(APP.user.nombre || (isAdmin() ? 'Administración' : 'Visualizador'))}</b><div class="xs muted">${isAdmin() ? 'Administración · ves todo' : 'Visualizador · puedes vender'}</div></div></div>
         ${more.length > 4 ? `<div class="searchbox">${icon('search')}<input class="input" id="moQ" type="search" placeholder="¿Qué buscas? (ej.: etiquetas, dinero)" autocomplete="off"></div>` : ''}
         <div id="moLista" class="stack">${grupos.map((g) => `<section class="mo-grp" data-g><h3 class="grp-t">${esc(g || 'Opciones')}</h3><div class="mo-grid">${tiles.filter((t) => t.grupo === g).map((n) => `<a class="mo-tile" href="#/${n.id}" data-go data-k="${esc((n.label + ' ' + (n.d || '')).toLowerCase())}"><span class="mo-ic">${icon(n.icon, 'lg')}${badge(n.id)}</span><span class="mo-t"><b>${esc(n.label)}</b><small>${esc(n.d || '')}</small></span></a>`).join('')}</div></section>`).join('')}</div>
+        ${isAdmin() && APP.facil() ? `<p class="small muted" style="margin:0">Modo fácil: hay opciones avanzadas escondidas. Las puedes mostrar en <a href="#/ajustes" data-go>Ajustes</a>.</p>` : ''}
         <section class="mo-grp"><h3 class="grp-t">Ayuda y cuenta</h3><div class="mo-grid">
           <button type="button" class="mo-tile" id="mAyuda"><span class="mo-ic">${icon('help', 'lg')}</span><span class="mo-t"><b>Cómo usar el panel</b><small>Lo básico paso a paso</small></span></button>
           <button type="button" class="mo-tile" id="mInstall" ${APP.installEvent ? '' : 'hidden'}><span class="mo-ic">${icon('download', 'lg')}</span><span class="mo-t"><b>Instalar app</b><small>En la pantalla de inicio</small></span></button>
