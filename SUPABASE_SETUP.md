@@ -123,6 +123,9 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 3. **Etiquetas**: en **Más → Etiquetas QR** eliges los productos y luego «Una etiqueta por Producto / Cada diseño o color». El tamaño lo pones tú: botones rápidos (Pequeña 50×25, Mediana 66×32, Grande 100×50, Extra grande 100×70, Cuadrada 70×70) o escribes ancho, alto y tamaño del QR en milímetros; también la hoja (Carta o A4) y el margen. Te dice cuántas caben por hoja y se acuerda de tu elección en ese dispositivo.
 4. **Más opciones**: ahora son botones grandes agrupados (Mi día, Mercadería, Dinero, Compartir, Privado, Sistema), con una frase que explica cada uno, un buscador y números rojos donde hay algo pendiente (avisos, productos sin foto o precio, etiquetas sin imprimir).
 
+## 16. Mi catálogo (tus productos para compartir)
+**Más → Mi catálogo** da un enlace, un QR y el botón de WhatsApp. Es distinto del catálogo de Tupperware (librito): aquí salen **todos tus productos registrados**, con foto, precio, estilos y si están disponibles. La clienta busca, filtra por categoría, elige el diseño o color, arma **su pedido** y te lo manda por WhatsApp ya escrito. Siempre está al día (no hay que subir nada) y no muestra costos ni códigos de Tupperware. Los productos ocultos o archivados no salen. No necesita ningún SQL nuevo. El enlace usa la dirección de Ajustes → «Dirección de la app».
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

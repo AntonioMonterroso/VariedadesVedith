@@ -298,6 +298,12 @@
       const cfgRows = ok(await sb.from('vista_config_publica').select('*'));
       return { producto: p, config: Object.fromEntries(cfgRows.map((r) => [r.clave, r.valor || ''])) };
     },
+    // Catálogo propio para compartir: todos los productos a la venta (sin costos ni códigos de Tupperware)
+    async tiendaPublica() {
+      const rows = ok(await sb.from('vista_producto_publico').select('*').order('nombre').limit(5000));
+      const cfgRows = ok(await sb.from('vista_config_publica').select('*'));
+      return { productos: rows, config: Object.fromEntries(cfgRows.map((r) => [r.clave, r.valor || ''])) };
+    },
     async logScan(codigo) {
       try { await sb.from('escaneos_qr').insert({ producto_codigo: codigo, dispositivo: /Mobi/i.test(navigator.userAgent) ? 'móvil' : 'computadora' }); } catch (_) {}
     },

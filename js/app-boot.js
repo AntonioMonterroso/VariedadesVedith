@@ -164,6 +164,7 @@
      ===================================================================== */
   async function boot() {
     registrarSW();
+    if (new URLSearchParams(location.search).get('tienda')) return APP.renderTienda();
     const catalogo = new URLSearchParams(location.search).get('c');
     if (catalogo) return APP.renderCatalogoPublico(catalogo);
     const codigo = new URLSearchParams(location.search).get('p');

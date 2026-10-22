@@ -294,6 +294,10 @@
         config: { nombre_negocio: db.config.nombre_negocio, whatsapp: db.config.whatsapp }
       });
     },
+    async tiendaPublica() {
+      const productos = db.productos.filter((x) => x.activo && !x.archivado).map((p) => ({ codigo: p.codigo, nombre: p.nombre, descripcion: p.descripcion, categoria: catName(p.categoria_id), precio: p.precio, disponible: p.cantidad > 0 || p.avisar_stock === false, fotos: p.fotos, colores: p.usa_colores ? p.colores.map((c) => ({ color: c.color, hex: c.hex, diseno: c.diseno || null, tono: c.tono || null, hexes: c.hexes || null, foto: c.foto || '', disponible: c.cantidad > 0 || p.avisar_stock === false })) : [] }));
+      return delay({ productos, config: { nombre_negocio: db.config.nombre_negocio, whatsapp: db.config.whatsapp } });
+    },
     async logScan() {},
     /* Catálogos: en la demo viven solo en memoria (se pierden al recargar la página) */
     async catalogos() { admin(); return delay(CAT.lista); },

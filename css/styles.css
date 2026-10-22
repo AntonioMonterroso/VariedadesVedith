@@ -987,3 +987,25 @@ button.action { font: inherit; color: inherit; cursor: pointer; }
 .label-preview { overflow-x: auto; }
 .main { min-width: 0; }
 .shell { min-width: 0; }
+
+/* ===== Catálogo propio (público) ===== */
+.tienda { padding-bottom: 96px; }
+.tienda-wrap { width: 100%; max-width: 1000px; display: grid; gap: 14px; }
+.tienda-top { display: flex; align-items: center; gap: 12px; }
+.tienda-top img { height: 56px; }
+.tienda-top h1 { font-size: 1.35rem; line-height: 1.15; } .tienda-top p { color: var(--ink-3); font-size: .85rem; }
+.tienda-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 640px) { .tienda-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1000px) { .tienda-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } }
+.tprod { display: grid; gap: 4px; align-content: start; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 8px 8px 12px; cursor: pointer; color: inherit; transition: transform 140ms var(--ease-out); }
+.tprod:active { transform: scale(0.98); }
+.tprod.agot .tp-foto img { opacity: .5; }
+.tp-foto { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; }
+.tp-foto img { width: 100%; height: 100%; object-fit: cover; }
+.tp-ag { position: absolute; left: 6px; bottom: 6px; }
+.tp-n { font-weight: 700; font-size: .9rem; line-height: 1.25; padding: 0 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tp-p { padding: 0 4px; font-weight: 800; color: var(--pink-600); }
+.tp-v { padding: 0 4px; }
+.pedido-bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 40%); z-index: 20; display: grid; justify-items: center; }
+.pedido-bar .btn { max-width: 560px; min-height: 56px; }
+.tienda-share .tienda-qr { background: #fff; padding: 8px; border-radius: 14px; flex: none; }

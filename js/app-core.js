@@ -137,7 +137,8 @@
       { g: 'Dinero', id: 'dinero', label: 'Dinero y depósitos', icon: 'wallet', d: 'Efectivo y bancos' },
       { id: 'gastos', label: 'Gastos', icon: 'wallet', d: 'Lo que gastas' },
       { id: 'reportes', label: 'Reportes', icon: 'chart', d: 'Ganancias y Excel' },
-      { g: 'Compartir', id: 'catalogos', label: 'Catálogos (librito)', icon: 'book', d: 'PDF a librito' },
+      { g: 'Compartir', id: 'tienda', label: 'Mi catálogo', icon: 'tag', d: 'Tus productos para compartir' },
+      { id: 'catalogos', label: 'Catálogo Tupperware', icon: 'book', d: 'PDF a librito' },
       { id: 'estados', label: 'Imágenes para estados', icon: 'image', d: 'Para WhatsApp' },
       { g: 'Privado', id: 'dulces', label: 'Dulces', icon: 'lock', d: 'Gelatinas y gomitas' },
       { g: 'Sistema', id: 'notificaciones', label: 'Notificaciones', icon: 'bell', d: 'Avisos de ventas' },
@@ -244,7 +245,7 @@
   APP.render = async function (animar) {
     if (!APP.user) return;
     let { id, params } = APP.route();
-    const adminOnly = ['inicio', 'ventas', 'ingreso', 'dulces', 'catalogos', 'pendientes', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'notificaciones', 'ajustes'];
+    const adminOnly = ['inicio', 'ventas', 'ingreso', 'dulces', 'catalogos', 'pendientes', 'cajas', 'dinero', 'cobrar', 'reportes', 'gastos', 'etiquetas', 'tienda', 'notificaciones', 'ajustes'];
     if (!isAdmin() && (adminOnly.includes(id) || id === 'productos')) id = 'inventario';
     if (isAdmin() && id === 'mis-ventas') id = 'ventas';
     const page = APP.pages[id] || APP.pages.inventario;
