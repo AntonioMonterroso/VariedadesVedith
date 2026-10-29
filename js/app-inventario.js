@@ -112,6 +112,33 @@
     return cs.map((c) => ({ nombre: c.color, foto: c.foto || '', n: Number(c.cantidad) || 0, items: [c], solo: c }));
   }
   APP.estilosDe = estilos;
+
+  /* ---------- ritmo de ventas: qué se vende rápido y cuánto conviene pedir ---------- */
+  APP.ritmo = null;
+  APP.cargarRitmo = async function (forzar) {
+    if (!isAdmin()) return null;
+    if (APP.ritmo && !forzar && Date.now() - APP.ritmo.at < 300000) return APP.ritmo;
+    try {
+      const ventas = await API.ventas(), desde = Date.now() - 30 * 86400000, m = {};
+      ventas.forEach((v) => { if (v.anulada || !v.producto_id) return; const r = m[v.producto_id] = m[v.producto_id] || { v30: 0, total: 0 }; r.total += v.cantidad; if (new Date(v.created_at) >= desde) r.v30 += v.cantidad; });
+      APP.ritmo = { at: Date.now(), m };
+    } catch (_) { APP.ritmo = null; }
+    return APP.ritmo;
+  };
+  // rápido: 6 o más en 30 días · normal: de 1 a 5 · sin ventas: ninguna en 30 días
+  APP.ritmoDe = (p) => {
+    const r = (APP.ritmo && APP.ritmo.m[p.id]) || { v30: 0, total: 0 };
+    const nivel = r.v30 >= 6 ? 'rapido' : r.v30 >= 1 ? 'normal' : 'sin';
+    const objetivo = nivel === 'rapido' ? r.v30 : nivel === 'normal' ? Math.max(2, r.v30) : 1;
+    return { v30: r.v30, nivel, sugerido: Math.max(1, objetivo - Math.max(0, p.cantidad)) };
+  };
+  APP.ritmoPill = (p) => {
+    if (!APP.ritmo) return '';
+    const r = APP.ritmoDe(p);
+    if (r.nivel === 'rapido') return `<span class="pill ok" title="${r.v30} vendidas en 30 días">Se vende rápido</span>`;
+    if (r.nivel === 'normal') return `<span class="pill" title="${r.v30} vendidas en 30 días">Se vende normal</span>`;
+    return p.cantidad > 0 ? '<span class="pill warn" title="Ninguna venta en 30 días">Sin ventas en 30 días</span>' : '';
+  };
   const fotoDe = (p) => (p.fotos && p.fotos[0]) || '';
 
   function tarjeta(p) {
@@ -127,7 +154,7 @@
     return `<section class="card inv-card ${est === 'agotado' ? 'is-agot' : ''}" data-pid="${esc(p.id)}">
       <button type="button" class="inv-head" data-ficha aria-label="Abrir ${esc(p.nombre)}">
         <span class="inv-foto">${fotoDe(p) ? U.imgTag(fotoDe(p), p.nombre) : U.placeholder('Sin foto')}</span>
-        <span class="grow" style="min-width:0"><span class="inv-nm">${esc(p.nombre)}</span><span class="inv-sub">${money(p.precio)}${p.campana ? ' · ' + esc(p.campana) : ''}${ad && !p.activo ? ' · oculto' : ''}</span></span>
+        <span class="grow" style="min-width:0"><span class="inv-nm">${esc(p.nombre)}</span><span class="inv-sub">${money(p.precio)}${p.campana ? ' · ' + esc(p.campana) : ''}${ad && !p.activo ? ' · oculto' : ''}</span>${ad ? `<span class="inv-ritmo">${APP.ritmoPill(p)}</span>` : ''}</span>
         <span class="inv-tot ${est}"><b class="num">${p.cantidad}</b><small>${est === 'agotado' ? 'agotado' : 'tengo'}</small></span>
       </button>
       ${es.length ? `<div class="est-strip">${tiles}</div>` : ''}
@@ -253,6 +280,7 @@
       });
     }
     P.inventario.paint = paint;
+    if (ad) APP.cargarRitmo().then(() => { if (APP.current === 'inventario' && P.inventario.paint && !document.querySelector('.inv-edit')) paint(); });
     main.querySelectorAll('#invV [data-v]').forEach((b) => b.addEventListener('click', () => { INV.vista = b.dataset.v; U.lsSet('vedith-vista', INV.vista); main.querySelectorAll('#invV button').forEach((x) => x.setAttribute('aria-pressed', x === b)); paint(); }));
     const nv = main.querySelector('#invNuevo'); if (nv) nv.addEventListener('click', () => APP.productoRapido());
     const pn = main.querySelector('#pasoNuevo'); if (pn) pn.addEventListener('click', () => APP.productoRapido());

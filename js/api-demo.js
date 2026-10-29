@@ -110,6 +110,7 @@
         nombre: p.nombre.trim(), categoria_id: p.categoria_id || null, descripcion: (p.descripcion || '').trim(),
         precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, cantidad: parseInt(p.cantidad, 10) || 0,
         stock_minimo: parseInt(p.stock_minimo, 10) || 0, activo: p.activo !== false,
+        precio_anterior: p.precio_anterior === '' || p.precio_anterior == null ? null : Number(p.precio_anterior),
         precio_regateo: p.precio_regateo === '' || p.precio_regateo == null ? null : Number(p.precio_regateo),
         ...(p.precio_catalogo !== undefined ? { precio_catalogo: p.precio_catalogo === '' || p.precio_catalogo == null ? null : Number(p.precio_catalogo) } : {}),
         codigo_tupperware: (p.codigo_tupperware || '').trim(), fotos: (p.fotos || []).filter(Boolean).slice(0, 5),
@@ -295,7 +296,7 @@
       });
     },
     async tiendaPublica() {
-      const productos = db.productos.filter((x) => x.activo && !x.archivado).map((p) => ({ codigo: p.codigo, nombre: p.nombre, descripcion: p.descripcion, categoria: catName(p.categoria_id), precio: p.precio, disponible: p.cantidad > 0 || p.avisar_stock === false, fotos: p.fotos, colores: p.usa_colores ? p.colores.map((c) => ({ color: c.color, hex: c.hex, diseno: c.diseno || null, tono: c.tono || null, hexes: c.hexes || null, foto: c.foto || '', disponible: c.cantidad > 0 || p.avisar_stock === false })) : [] }));
+      const productos = db.productos.filter((x) => x.activo && !x.archivado).map((p) => ({ precio_anterior: p.precio_anterior || null, creado: p.created_at || null, codigo: p.codigo, nombre: p.nombre, descripcion: p.descripcion, categoria: catName(p.categoria_id), precio: p.precio, disponible: p.cantidad > 0 || p.avisar_stock === false, fotos: p.fotos, colores: p.usa_colores ? p.colores.map((c) => ({ color: c.color, hex: c.hex, diseno: c.diseno || null, tono: c.tono || null, hexes: c.hexes || null, foto: c.foto || '', disponible: c.cantidad > 0 || p.avisar_stock === false })) : [] }));
       return delay({ productos, config: { nombre_negocio: db.config.nombre_negocio, whatsapp: db.config.whatsapp } });
     },
     async logScan() {},

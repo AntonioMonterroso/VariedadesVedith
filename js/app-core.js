@@ -353,6 +353,7 @@
   APP.openFicha = function (p) {
     const ad = isAdmin();
     const gan = ad && p.costo != null ? p.precio - p.costo : null;
+    if (ad && APP.cargarRitmo && !APP.ritmo) APP.cargarRitmo();
     const est = APP.stockEstado(p);
     const es = APP.estilosDe ? APP.estilosDe(p) : [];
     const tarjetasEstilo = es.map((e) => {
@@ -373,7 +374,7 @@
         ${APP.gallery(p.fotos, p.nombre)}
         <div class="ficha-top">
           <div><div class="price-big num">${money(p.precio)}</div>
-            <div class="row wrap" style="margin-top:6px">${p.categoria ? `<span class="pill pink">${esc(p.categoria)}</span>` : ''}${ad && p.campana ? `<span class="pill">${esc(p.campana)}</span>` : ''}${ad && !p.activo ? '<span class="pill">Oculto</span>' : ''}</div></div>
+            <div class="row wrap" style="margin-top:6px">${p.precio_anterior > p.precio ? `<span class="pill ok">Oferta · antes ${money(p.precio_anterior)}</span>` : ''}${ad && APP.ritmoPill ? APP.ritmoPill(p) : ''}${p.categoria ? `<span class="pill pink">${esc(p.categoria)}</span>` : ''}${ad && p.campana ? `<span class="pill">${esc(p.campana)}</span>` : ''}${ad && !p.activo ? '<span class="pill">Oculto</span>' : ''}</div></div>
           <div class="inv-tot ${est}" style="min-width:84px"><b class="num">${p.cantidad}</b><small>${est === 'agotado' ? 'agotado' : 'tengo'}</small></div>
         </div>
         ${p.descripcion ? `<p class="muted">${esc(p.descripcion)}</p>` : ''}
@@ -506,6 +507,8 @@
         </section>
         <label class="field">Descuento (Regateo) <span class="hint">Opcional. El precio más bajo al que aceptas vender. Se muestra aparte del precio principal; quien vende lo ve solo si lo toca.</span>
           <input class="input" id="pfReg" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(p.precio_regateo ?? '')}" placeholder="Ej.: 135"></label>
+        <label class="field">Precio anterior (oferta) <span class="hint">Opcional. Si es mayor que el precio de venta, en tu catálogo se ve tachado con la etiqueta «Oferta».${API._ofertas === false ? ' <b>Falta correr migracion_ofertas.sql en Supabase.</b>' : ''}</span>
+          <input class="input" id="pfAnt" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(p.precio_anterior ?? '')}" placeholder="Ej.: 150"></label>
         <section class="stack-sm">
           <label class="row"><input type="checkbox" id="pfAvisar" ${p.avisar_stock !== false ? 'checked' : ''} ${API._colores === false ? 'disabled' : ''} style="width:22px;height:22px;accent-color:var(--pink-600)"> <span><b>Avisarme cuando se acabe</b> <span class="small muted">Si lo apagas no sale la alerta de poco stock y se puede vender aunque ya no haya.</span></span></label>
           <label class="field" id="pfMinBox" ${p.avisar_stock !== false ? '' : 'hidden'}>Avisarme cuando queden<input class="input" id="pfMin" type="number" inputmode="numeric" min="0" value="${esc(p.stock_minimo)}"><span class="hint">Piezas o menos: sale la alerta de poco stock.</span></label>
@@ -594,7 +597,7 @@
         const id = await API.saveProducto({
           usa_colores: usa, colores, avisar_stock: chkAv.checked, campana: g('#pfCamp').value, conservar: g('#pfConservar').checked,
           id: p.id, nombre, categoria_id: g('#pfCat').value, descripcion: g('#pfDesc').value, precio,
-          costo: g('#pfCosto').value, precio_regateo: reg, cantidad: usa ? colores.reduce((s, c) => s + c.cantidad, 0) : g('#pfCant').value, stock_minimo: g('#pfMin').value,
+          costo: g('#pfCosto').value, precio_regateo: reg, precio_anterior: g('#pfAnt').value, cantidad: usa ? colores.reduce((s, c) => s + c.cantidad, 0) : g('#pfCant').value, stock_minimo: g('#pfMin').value,
           codigo_tupperware: g('#pfTup').value, activo: g('#pfActivo').checked, fotos
         });
         await APP.refreshCore(); m.close();

@@ -1021,3 +1021,9 @@ button.action { font: inherit; color: inherit; cursor: pointer; }
 .pasos { margin-bottom: 12px; }
 .ayuda-btn { align-self: flex-start; }
 .ayuda-pasos { margin: 0; padding-left: 22px; display: grid; gap: 10px; font-size: 1.02rem; line-height: 1.4; }
+
+/* ===== Oferta, nuevo y ritmo ===== */
+.tp-tag { position: absolute; left: 6px; top: 6px; padding: 3px 9px; border-radius: 999px; font-size: .72rem; font-weight: 800; color: #fff; }
+.tp-tag.oferta { background: #d34040; } .tp-tag.nuevo { background: #2e9e5b; }
+.tp-ant { color: var(--ink-3); font-weight: 600; font-size: .8rem; }
+.inv-ritmo { display: block; margin-top: 4px; }

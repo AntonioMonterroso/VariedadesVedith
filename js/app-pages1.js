@@ -145,8 +145,23 @@
         const m = openModal({ title: 'Archivar tanda', body: `<p>«${esc(F.camp)}» tiene <b>${enCamp.length}</b> productos:</p>
           <div class="list"><div class="item"><span class="grow"><div class="t1">${sinP.length} ya agotados</div><div class="t2">Sin piezas: es lo más seguro de archivar.</div></span></div>
             <div class="item"><span class="grow"><div class="t1">${conP.length} con piezas todavía</div><div class="t2">${piezas} piezas sin vender</div></span></div></div>
+          <div id="resTanda" class="card flat stack-sm"><p class="small muted">Calculando cómo le fue a esta tanda…</p></div>
           <p class="small muted">Lo archivado sale de la lista, del catálogo y del QR. Lo puedes <b>restaurar</b> durante ${diasBorrar()} días, y ahora mismo puedes tocar «Deshacer». Las ventas ya hechas no cambian.</p>`,
           footer: `<button type="button" class="btn secondary" data-no>Cancelar</button>${sinP.length ? `<button type="button" class="btn" data-solo>Archivar solo los agotados (${sinP.length})</button>` : ''}${conP.length ? '<button type="button" class="btn ghost" style="color:var(--red-600)" data-todo>Archivar todo…</button>' : ''}` });
+        (async () => {
+          try {
+            const ids = new Set(enCamp.map((p) => p.id)), ventas = (await API.ventas()).filter((v) => !v.anulada && ids.has(v.producto_id));
+            const uni = ventas.reduce((s, v) => s + v.cantidad, 0), ing = ventas.reduce((s, v) => s + Number(v.total), 0);
+            const gan = ventas.reduce((s, v) => s + (Number(v.precio_unitario) - Number(v.costo_unitario || 0)) * v.cantidad, 0);
+            const por = {}; ventas.forEach((v) => { por[v.producto_nombre] = (por[v.producto_nombre] || 0) + v.cantidad; });
+            const top = Object.entries(por).sort((a, b) => b[1] - a[1])[0];
+            const primero = enCamp.filter((p) => p.agotado_desde).sort((a, b) => a.agotado_desde.localeCompare(b.agotado_desde))[0];
+            const valor = conP.reduce((s, p) => s + p.cantidad * p.precio, 0);
+            const box = m.body.querySelector('#resTanda'); if (!box) return;
+            box.innerHTML = `<b class="small">Cómo le fue a «${esc(F.camp)}»</b><dl class="kv"><dt>Vendiste</dt><dd class="num">${uni} piezas · ${money(ing)}</dd><dt>Ganancia</dt><dd class="num">${money(gan)}</dd>
+              <dt>Te sobra</dt><dd class="num">${piezas} piezas${valor ? ' · ' + money(valor) : ''}</dd>${top ? `<dt>Lo más vendido</dt><dd>${esc(top[0])} (${top[1]})</dd>` : ''}${primero ? `<dt>Lo primero que se agotó</dt><dd>${esc(primero.nombre)}</dd>` : ''}</dl>`;
+          } catch (_) { const box = m.body.querySelector('#resTanda'); if (box) box.remove(); }
+        })();
         const correr = async (solo) => {
           try {
             const ids = await API.archivarCampana(F.camp, solo); await APP.refreshCore();

@@ -28,6 +28,7 @@
   const normProd = (r) => ({
     id: r.id, codigo: r.codigo, codigo_tupperware: r.codigo_tupperware || '',
     nombre: r.nombre, categoria_id: r.categoria_id, categoria: r.categorias ? r.categorias.nombre : (r.categoria || ''),
+    precio_anterior: r.precio_anterior == null ? null : Number(r.precio_anterior), creado: r.created_at || null,
     descripcion: r.descripcion || '', precio: Number(r.precio), precio_regateo: r.precio_regateo == null ? null : Number(r.precio_regateo),
     precio_catalogo: r.precio_catalogo == null ? null : Number(r.precio_catalogo), costo: r.costo == null ? null : Number(r.costo),
     cantidad: r.cantidad, stock_minimo: r.stock_minimo == null ? 2 : r.stock_minimo,
@@ -116,10 +117,13 @@
         if (row.usa_colores) row.cantidad = colores.reduce((s, c) => s + (parseInt(c.cantidad, 10) || 0), 0);
       }
       if (this._campanas) { row.campana = (p.campana || '').trim() || null; row.conservar = !!p.conservar; }
+      if (this._ofertas !== false && p.precio_anterior !== undefined) row.precio_anterior = p.precio_anterior === '' || p.precio_anterior == null ? null : Number(p.precio_anterior);
       if (p.precio_catalogo !== undefined) row.precio_catalogo = p.precio_catalogo === '' || p.precio_catalogo == null ? null : Number(p.precio_catalogo);
       let id = p.id;
-      if (id) ok(await sb.from('productos').update(row).eq('id', id));
-      else id = ok(await sb.from('productos').insert(row).select('id').single()).id;
+      const guardar = async () => (id ? sb.from('productos').update(row).eq('id', id) : sb.from('productos').insert(row).select('id').single());
+      let r0 = await guardar();
+      if (r0.error && 'precio_anterior' in row && /precio_anterior/i.test(r0.error.message || '')) { this._ofertas = false; delete row.precio_anterior; r0 = await guardar(); }   // falta migracion_ofertas.sql: se guarda sin oferta
+      const dato = ok(r0); if (!id) id = dato.id;
       // fotos: solo links; se reemplazan completas
       ok(await sb.from('fotos_producto').delete().eq('producto_id', id));
       const fotos = (p.fotos || []).filter(Boolean).slice(0, 5).map((url, i) => ({ producto_id: id, url_foto: url, orden: i }));

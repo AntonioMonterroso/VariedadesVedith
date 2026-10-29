@@ -156,6 +156,7 @@
           ${bloqueada ? `<div class="banner info">${icon('check')}<span class="small">Esta caja ya se recibió; los productos no se pueden cambiar. Si te equivocaste, usa “Deshacer recepción”.</span></div>` : `
           <div class="row"><div class="searchbox grow">${icon('search')}<input class="input" id="cjBuscar" type="search" placeholder="Buscar producto para agregar…" autocomplete="off"></div>
             <button type="button" class="btn secondary" id="cjNuevoProd">${icon('plus')} Producto nuevo</button></div>
+          <button type="button" class="btn ghost sm" id="cjAcaba" style="justify-self:start">${icon('package', 'sm')} Armar con lo que se acaba</button>
           <div id="cjRes" class="pick-list" hidden></div>`}
           <div id="cjItems" class="stack-sm"></div>
         </section>
@@ -203,6 +204,23 @@
         res.hidden = false;
         res.innerHTML = list.length ? list.map((p) => APP.productoItem(p)).join('') : `<div class="empty">No existe todavía. Toca “Producto nuevo”.</div>`;
         res.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => { agregar(APP.prod(b.dataset.id)); q.value = ''; res.hidden = true; q.focus(); }));
+      });
+      g('#cjAcaba').addEventListener('click', async () => {
+        const b = g('#cjAcaba'); b.disabled = true;
+        await APP.cargarRitmo();
+        let n = 0;
+        APP.productos.filter((p) => p.activo).forEach((p) => {
+          const r = APP.ritmoDe(p), min = p.stock_minimo ?? 2;
+          const poner = (color, nombre, cant) => {
+            if (items.some((i) => i.producto_id === p.id && (i.color || null) === (color || null))) return;
+            items.push({ producto_id: p.id, producto_nombre: nombre, color: color || null, cantidad: Math.max(1, cant), costo_unitario: Number(p.costo) || 0 }); n++;
+          };
+          if (p.avisar_stock === false) return;
+          if (p.usa_colores && p.colores.length) p.colores.forEach((c) => { if ((Number(c.cantidad) || 0) <= min) poner(c.color, `${p.nombre} (${c.color})`, r.sugerido); });
+          else if (p.cantidad <= min) poner(null, p.nombre, r.sugerido);
+        });
+        b.disabled = false; pintarItems(); recalc();
+        toast(n ? `Se agregaron ${n} ${n === 1 ? 'producto' : 'productos'} que se están acabando. Ajusta las cantidades.` : 'No hay nada que se esté acabando.', { ms: 5000 });
       });
       g('#cjNuevoProd').addEventListener('click', () => {
         APP.openProductoForm(null, {

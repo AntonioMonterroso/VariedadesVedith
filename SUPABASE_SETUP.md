@@ -140,6 +140,12 @@ Los productos van por tandadas y casi no se repiten, así que el panel se mantie
 
 6. **«¿Cómo se hace?»** en cada pantalla (arriba, junto al título): abre 2 a 4 pasos cortos de esa pantalla. Y al guardar algo, el aviso dice qué pasó y ofrece el siguiente paso (por ejemplo «Ver inventario»).
 
+## 18. Qué pedir, cierre de tanda y ofertas
+1. **Qué se vende rápido** (solo administración): cada producto muestra «Se vende rápido» (6 o más en 30 días), «Se vende normal» (de 1 a 5) o «Sin ventas en 30 días», en Inventario (vista Detalle) y en su ficha. No necesita SQL.
+2. **Cajas → Caja nueva → «Armar con lo que se acaba»**: agrega los productos (y colores) que están en su mínimo o agotados, con una cantidad sugerida según lo que se vende. Tú ajustas.
+3. **Resumen al archivar una tanda**: antes de archivar muestra cuántas piezas vendiste, el dinero, la ganancia, lo que te sobra, lo más vendido y lo primero que se agotó. No necesita SQL.
+4. **Oferta y Nuevo en Mi catálogo**: en el formulario del producto, **Precio anterior (oferta)**. Si es mayor que el precio de venta, el catálogo lo muestra tachado con «Oferta −X %». Lo creado en los últimos 14 días sale como «Nuevo». **Esto sí necesita correr `migracion_ofertas.sql`** en Supabase; sin eso todo lo demás funciona y el formulario avisa que falta.
+
 ## Cambiar un PIN después
 Desde el panel: **Ajustes → Cambiar PIN** (usa la función `cambiar-pin`). También se puede en Authentication → Users.
 

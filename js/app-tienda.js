@@ -76,6 +76,9 @@
     </div>
     <div class="pedido-bar" id="tBar" hidden><button type="button" class="btn green block" id="tPedido"></button></div></div>`;
 
+    const enOferta = (p) => Number(p.precio_anterior) > Number(p.precio);
+    const esNuevo = (p) => p.creado && Date.now() - new Date(p.creado) < 14 * 86400000;
+    const etiqueta = (p) => (enOferta(p) ? `<span class="tp-tag oferta">Oferta −${Math.round((1 - p.precio / p.precio_anterior) * 100)}%</span>` : esNuevo(p) ? '<span class="tp-tag nuevo">Nuevo</span>' : '');
     const lineaDe = (p, estilo) => pedido.find((l) => l.codigo === p.codigo && (l.estilo || '') === (estilo || ''));
     const pintarBarra = () => {
       const n = pedido.reduce((s, l) => s + l.cant, 0), bar = root.querySelector('#tBar');
@@ -87,8 +90,8 @@
       const lista = todos.filter((p) => (F.agot || p.disponible) && (!F.cat || p.categoria === F.cat) && (!q || (p.nombre + ' ' + (p.descripcion || '') + ' ' + (p.colores || []).map((c) => c.color).join(' ')).toLowerCase().includes(q)));
       const g = root.querySelector('#tGrid');
       g.innerHTML = lista.length ? lista.map((p) => `<button type="button" class="tprod ${p.disponible ? '' : 'agot'}" data-c="${esc(p.codigo)}">
-        <span class="tp-foto">${p.fotos && p.fotos[0] ? U.imgTag(p.fotos[0], p.nombre) : U.placeholder('Sin foto')}${p.disponible ? '' : '<span class="pill bad tp-ag">Agotado</span>'}</span>
-        <span class="tp-n">${esc(p.nombre)}</span><span class="tp-p num">${money(p.precio)}</span>
+        <span class="tp-foto">${p.fotos && p.fotos[0] ? U.imgTag(p.fotos[0], p.nombre) : U.placeholder('Sin foto')}${p.disponible ? '' : '<span class="pill bad tp-ag">Agotado</span>'}${etiqueta(p)}</span>
+        <span class="tp-n">${esc(p.nombre)}</span><span class="tp-p num">${money(p.precio)}${enOferta(p) ? ` <s class="tp-ant">${money(p.precio_anterior)}</s>` : ''}</span>
         ${(p.colores || []).length ? `<span class="tp-v">${APP.dots({ usa_colores: true, colores: p.colores.map((c) => ({ ...c, cantidad: null })) }, 5)}</span>` : ''}</button>`).join('')
         : '<div class="card empty" style="grid-column:1/-1"><p>No encontré productos con eso.</p></div>';
       g.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => detalle(todos.find((p) => p.codigo === b.dataset.c))));
@@ -99,7 +102,7 @@
       const unidades = dis ? [...new Map(cols.filter((c) => c.diseno).map((c) => [c.diseno, c])).values()].map((c) => ({ n: c.diseno, foto: c.foto, c, ok: cols.filter((x) => x.diseno === c.diseno).some((x) => x.disponible) })) : cols.map((c) => ({ n: c.color, foto: c.foto, c, ok: c.disponible }));
       const m = openModal({ title: p.nombre, wide: true, body: `
         ${APP.gallery(p.fotos, p.nombre)}
-        <div class="row between wrap"><div class="price-big num">${money(p.precio)}</div>${p.disponible ? '<span class="pill ok">Disponible</span>' : '<span class="pill bad">Agotado por ahora</span>'}</div>
+        <div class="row between wrap"><div class="price-big num">${money(p.precio)}${enOferta(p) ? ` <s class="tp-ant" style="font-size:1rem">${money(p.precio_anterior)}</s>` : ''}</div>${p.disponible ? '<span class="pill ok">Disponible</span>' : '<span class="pill bad">Agotado por ahora</span>'}</div>
         ${p.descripcion ? `<p class="muted">${esc(p.descripcion)}</p>` : ''}
         ${unidades.length ? `<div class="stack-sm"><b class="small">${dis ? 'Elige el diseño' : 'Elige el color'}</b><div class="chips" style="flex-wrap:wrap;overflow:visible" id="tEst">${unidades.map((u) => `<button type="button" class="chip" data-e="${esc(u.n)}" ${u.ok ? '' : 'disabled style="opacity:.45;text-decoration:line-through"'} aria-pressed="false">${APP.vdot({ ...u.c, color: u.n, tono: dis ? '' : u.c.tono })}${esc(u.n)}</button>`).join('')}</div></div>` : ''}
         <p class="xs faint">Código ${esc(p.codigo)}</p>`,
